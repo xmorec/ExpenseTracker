@@ -1,0 +1,5 @@
+#excluding folder .vs created from Visual Studio (compiling folder)
+.vs
+
+#excluding folder x64 created from Visual Studio (compiling folder)
+/x64/Debug
