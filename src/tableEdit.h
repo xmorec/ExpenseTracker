@@ -4,9 +4,29 @@
 class tableEdit : public QTableWidget
 {
 private:
-    QColor disableColor{ QColor(Qt::gray) };
-    QColor enableColor{ QColor(Qt::white) };
-    QColor errorColor{ QColor(Qt::magenta) };
+    
+    // Code Colors for cells
+    inline static QColor disableColor{ QColor(Qt::gray) };
+    inline static QColor enableColor{ QColor(Qt::white) };
+    inline static QColor errorColor{ QColor(Qt::magenta) };
+
+    // Headers Style:
+    inline static QString headerStyle{ 
+        "QHeaderView::section{"
+        "background-color: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0 #616161, stop: 0.5 #505050, stop: 0.6 #434343, stop:1 #656565);"
+        "color: white;"
+        "padding-left: 4px; "
+        "border: 1px solid black;"
+        "}"
+    };
+
+    // Cell Style:
+    inline static QString cellStyle{
+        "QTableView {" 
+        "gridline-color: black;" 
+        "}"
+    };
+
 
 public:
 
@@ -17,6 +37,12 @@ public:
 
         //setEditTriggers(QAbstractItemView::NoEditTriggers);
         setSelectionMode(QAbstractItemView::NoSelection);
+
+
+        // Setting the style of Table (headers and cells)
+        horizontalHeader()->setStyleSheet(headerStyle);
+        setStyleSheet(cellStyle);
+
     }
 
     void disableCell(int row, int column, bool disable)
@@ -29,22 +55,19 @@ public:
 
         QTableWidgetItem* item = this->item(row, column);
 
-        // Verify if the cell(row,column) has already a QTableWidgetItem assignet to it
+        // Verify if the cell(row,column) has already a QTableWidgetItem assigned to it
         if (!item) {
             item = new QTableWidgetItem();
             this->setItem(row, column, item);
         }
-
-                
+                        
         if (disable) //Disabling editing and selecting the cell
         {
-            item->setText("disabled");
             item->setFlags(item->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
             item->setBackground(disableColor);
         }
         else //Enabling editing and selecting the cell
         {
-            item->setText("enabled");
             item->setFlags(item->flags() | Qt::ItemIsEditable | Qt::ItemIsSelectable);
             item->setBackground(enableColor);
         }
