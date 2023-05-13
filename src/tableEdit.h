@@ -3,6 +3,9 @@
 
 class tableEdit : public QTableWidget
 {
+
+    Q_OBJECT
+
 private:
     
     // Code Colors for cells
@@ -38,10 +41,13 @@ public:
         //setEditTriggers(QAbstractItemView::NoEditTriggers);
         setSelectionMode(QAbstractItemView::NoSelection);
 
-
         // Setting the style of Table (headers and cells)
         horizontalHeader()->setStyleSheet(headerStyle);
         setStyleSheet(cellStyle);
+
+        // Disabling the user resizes columns and headers manually
+        horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+        verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
     }
 
@@ -72,8 +78,22 @@ public:
             item->setBackground(enableColor);
         }
 
-    //setItem(row, column, item);
+    }
 
+
+    void adaptWidgetToTable()
+    {
+    //savingTable->resizeColumnsToContents();
+    //savingTable->horizontalHeader()->setDefaultSectionSize(100);
+
+    int tableWidth{};
+
+    for (int i{ 0 }; i < columnCount(); ++i)
+    {
+        tableWidth += columnWidth(i);
+    }
+    setFixedWidth(tableWidth + 2 * frameWidth());
+    
     }
 
 };
