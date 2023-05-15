@@ -35,9 +35,9 @@ public:
     
     //enum values to set the fitting type of the widget to the table (width, height, whole: both height and width)
     const enum widgetFit {
-        width,
-        height,
-        whole
+        WidthFit,
+        HeightFit,
+        WholeFit
     };
 
 public:
@@ -91,10 +91,10 @@ public:
     }
 
 
-    void adaptWidgetToTable(widgetFit wfit = widgetFit::whole)
+    void adaptWidgetToTable(widgetFit wfit = widgetFit::WholeFit)
     {
         // Adapt widget to table from width
-        if (wfit == widgetFit::whole || wfit == widgetFit::width) 
+        if (wfit == widgetFit::WholeFit || wfit == widgetFit::WidthFit)
         {
             int tableWidth{ verticalHeader()->width() };
 
@@ -105,14 +105,14 @@ public:
             }
 
             // Set the widget width to the table width plus table border width
-            setFixedWidth(tableWidth + 1 * frameWidth());
+            setFixedWidth(tableWidth + 2 * frameWidth());
 
             // Disable the horizontal scroll bar
             setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         }
 
         // Adapt widget to table from height
-        if (wfit == widgetFit::whole || wfit == widgetFit::height)
+        if (wfit == widgetFit::WholeFit || wfit == widgetFit::HeightFit)
         {
             int tableHeight{ horizontalHeader()->height() };
 
@@ -123,7 +123,7 @@ public:
             }
 
             // Set the widget height to the table height plus table border width
-            setFixedHeight(tableHeight + 1 * frameWidth());
+            setFixedHeight(tableHeight + 2 * frameWidth());
 
             // Disable the vertical scroll bar
             setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

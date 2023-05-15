@@ -44,15 +44,56 @@ mainWindow::mainWindow(const QRect& screen)
     ///// OVERVIEW TABLE EXPENSES
     ///////////////////////////////////////
 
-    tableEdit* savingTable2 = new tableEdit(4, 5);
-    savingTable2->adaptWidgetToTable();
-    tableHlayout->addWidget(savingTable2);
-    tableHlayout->setAlignment(savingTable2, Qt::AlignRight);
+    QStringList expensesHeaders
+    {{
+        "Expense",
+        "Amount (€)",
+        "Frequency",
+        "Total Amount (€)",
+        "rmv bttn"
+    }};
+
+    QString moneyUnit{ "€" };
+
+    QStringList expense0{{ "Rent", "700", "1", QString::number(700*1) }};
+    QStringList expense1{{ "Car Gas", "35.31", "4", QString::number(35.31*4) }};
+    QStringList expense2{{ "SuperMarket", "65", "5", QString::number(65*5) }};
+    std::vector<QStringList> expenses{};
+
+    expenses.push_back(expense0);
+    expenses.push_back(expense1);
+    expenses.push_back(expense2);
+
+    tableEdit* expensesTable = new tableEdit(expenses.size(), expensesHeaders.length());
+
+    expensesTable->setHorizontalHeaderLabels(expensesHeaders);
+
+    for (int row{0}; row < expenses.size(); ++row)
+    {
+        for (int col{ 0 }; col < expenses[row].length(); ++col)
+        {
+            QTableWidgetItem* item{ new QTableWidgetItem(expenses[row][col])};
+            expensesTable->setItem(row, col, item);
+        }
+    }
+
+    std::vector<QPushButton*> rmvButtonsVect(expenses.size());
+
+    for (int row{ 0 }; row < expenses.size(); ++row)
+    {
+        rmvButtonsVect[row] = new QPushButton("Remove");
+        expensesTable->setCellWidget(row, expensesHeaders.length()-1, rmvButtonsVect[row]);
+    }
+
+
+    expensesTable->adaptWidgetToTable();
+    tableHlayout->addWidget(expensesTable);
+    tableHlayout->setAlignment(expensesTable, Qt::AlignRight);
 
 
     ///// OVERVIEW TABLE SAVING
     ///////////////////////////////////////
-    QStringList savingParametersList{
+    QStringList savingParametersHeaders{
         {
             "Salary",
             "Despesa Fixa",
@@ -61,9 +102,9 @@ mainWindow::mainWindow(const QRect& screen)
         }
     };
 
-    tableEdit* savingTable = new tableEdit(1, savingParametersList.length());
+    tableEdit* savingTable = new tableEdit(1, savingParametersHeaders.length());
 
-    savingTable->setHorizontalHeaderLabels(savingParametersList);
+    savingTable->setHorizontalHeaderLabels(savingParametersHeaders);
 
     //savingTable->resizeColumnsToContents();
     //savingTable->horizontalHeader()->setDefaultSectionSize(100);
@@ -76,16 +117,6 @@ mainWindow::mainWindow(const QRect& screen)
     //QTableWidget* savingTableX = new QTableWidget(2, 2);
     savingTable->setCellWidget(0, 0, quitButton);
     
-    QTableWidget* nestedTable = new QTableWidget(1,3);
-    nestedTable->horizontalHeader()->setVisible(false);
-    nestedTable->verticalHeader()->setVisible(false);
-    nestedTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    //nestedTable->adaptWidgetToTable();
-    nestedTable->setShowGrid(false);
-
-    savingTable->setCellWidget(0,1, nestedTable);
-    savingTable->setColumnWidth(1,300);
-
     tableHlayout->addWidget(savingTable);
     tableHlayout->setAlignment(savingTable, Qt::AlignLeft);
 
