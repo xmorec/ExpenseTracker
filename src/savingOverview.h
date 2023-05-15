@@ -6,17 +6,18 @@ class savingOverview : public QHBoxLayout
 {
 
 private:
-    //QHBoxLayout* tableHlayout{};
+    inline static const QString moneyUnit{ "€" };
+    tableEdit* expensesTable{};
 
 public:
 
 	savingOverview() : QHBoxLayout()
 	{
-        //tableHlayout = new QHBoxLayout();
-
-
-        ///// OVERVIEW TABLE EXPENSES
-        ///////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////-------------///////////////////////////////////////////////////
+        ////////// ---------- Overview Expenses Table  ---------/////////////////////////////////
+        /////////////////////////-------------///////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////
 
         QStringList expensesHeaders
         { {
@@ -27,7 +28,7 @@ public:
             "rmv bttn"
         } };
 
-        QString moneyUnit{ "€" };
+    
 
         QStringList expense0{ { "Rent", "700", "1", QString::number(700 * 1) } };
         QStringList expense1{ { "Car Gas", "35.31", "4", QString::number(35.31 * 4) } };
@@ -38,7 +39,7 @@ public:
         expenses.push_back(expense1);
         expenses.push_back(expense2);
 
-        tableEdit* expensesTable = new tableEdit(expenses.size(), expensesHeaders.length());
+        expensesTable = new tableEdit(expenses.size(), expensesHeaders.length());
 
         expensesTable->setHorizontalHeaderLabels(expensesHeaders);
 
@@ -57,16 +58,22 @@ public:
         {
             rmvButtonsVect[row] = new QPushButton("Remove");
             expensesTable->setCellWidget(row, expensesHeaders.length() - 1, rmvButtonsVect[row]);
+            QObject::connect(rmvButtonsVect[row], &QPushButton::clicked, [=]() {
+                removeExpense(row);
+                });
         }
 
 
         expensesTable->adaptWidgetToTable();
-        tableHlayout->addWidget(expensesTable);
-        tableHlayout->setAlignment(expensesTable, Qt::AlignRight);
+        addWidget(expensesTable);
+        setAlignment(expensesTable, Qt::AlignRight);
 
 
-        ///// OVERVIEW TABLE SAVING
-        ///////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////-------------///////////////////////////////////////////////////
+        ////////// ---------- Overview Saving Table  ---------/////////////////////////////////
+        /////////////////////////-------------///////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////
         QStringList savingParametersHeaders{
             {
                 "Salary",
@@ -86,13 +93,13 @@ public:
         savingTable->adaptWidgetToTable();
 
       
-        tableHlayout->addWidget(savingTable);
-        tableHlayout->setAlignment(savingTable, Qt::AlignLeft);
+        addWidget(savingTable);
+        setAlignment(savingTable, Qt::AlignLeft);
 	}
 
-    //QHBoxLayout* savingTablesLayout()
-    //{
-    //    return tableHlayout;
-    //}
+    void removeExpense(int row) 
+    {
+        expensesTable->disableCell(row, 0, true);
+    }
 
 };
