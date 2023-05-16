@@ -30,6 +30,8 @@ private:
         "}"
     };
 
+    int tableWidth{};
+    int tableHeight{};
 
 public:
     
@@ -98,14 +100,8 @@ public:
         {
             int tableWidth{ verticalHeader()->width() };
 
-            // Computing table width
-            for (int i{ 0 }; i < columnCount(); ++i)
-            {
-                tableWidth += columnWidth(i);
-            }
-
             // Set the widget width to the table width plus table border width
-            setFixedWidth(tableWidth + 2 * frameWidth());
+            setFixedWidth(getTableWidth());
 
             // Disable the horizontal scroll bar
             setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -114,23 +110,46 @@ public:
         // Adapt widget to table from height
         if (wfit == widgetFit::WholeFit || wfit == widgetFit::HeightFit)
         {
-            int tableHeight{ horizontalHeader()->height() };
-
-            // Computing table height
-            for (int i{ 0 }; i < rowCount(); ++i)
-            {
-                tableHeight += rowHeight(i);
-            }
-
+            
             // Set the widget height to the table height plus table border width
-            setFixedHeight(tableHeight + 2 * frameWidth());
+            setFixedHeight(getTableHeight());
 
             // Disable the vertical scroll bar
             setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         }
     }
 
+    int getTableWidth()
+    {
+        tableWidth = verticalHeader()->width();
 
+        // Computing table width (without borders)
+        for (int i{ 0 }; i < columnCount(); ++i)
+        {
+            tableWidth += columnWidth(i);
+        }
+
+        // Add table borders width
+        tableWidth += 2 * frameWidth();
+
+        return tableWidth;
+    }
+
+    int getTableHeight()
+    {
+        tableHeight = horizontalHeader()->height();
+
+        // Computing table height
+        for (int i{ 0 }; i < rowCount(); ++i)
+        {
+            tableHeight += rowHeight(i);
+        }
+
+        // Add table borders width
+        tableHeight += 2 * frameWidth();
+
+        return tableHeight;
+    }
 
 };
 
