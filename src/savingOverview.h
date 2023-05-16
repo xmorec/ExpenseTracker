@@ -28,6 +28,11 @@ private:
     tableEdit* expensesTable{};
     std::vector<QStringList> expenses{};
     std::vector<int> iteratorVect{};
+    int expensesNumber{};
+
+    QPushButton* addExpenseButton{ new QPushButton("Add") };
+    QPushButton* saveButton{ new QPushButton("Save") };
+    QPushButton* cancelButton{ new QPushButton("Cancel") };
 
     ////////// ---------- Savings Table Parameters ---------////////////////////////////////
     inline static const QString incomeHeader{ "Income" };
@@ -55,24 +60,23 @@ public:
         ////////// ---------- Overview Expenses Table  ---------////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////
 
+        //The Expenses Table is initializated, filled with the user values and Remove Buttons and also made updateable
         fillExpensesTable();
 
-        QPushButton* addExpenseButton{ new QPushButton("Add") };
-        QPushButton* saveButton{ new QPushButton("Save") };
-        QPushButton* cancelButton{ new QPushButton("Cancel") };
-
-        QObject::connect(addExpenseButton, & QPushButton::clicked, [=]() {
+        // Adding an Expense
+        QObject::connect(addExpenseButton, &QPushButton::clicked, [=]() {
             addExpense();
             });
 
+        // TBD
         QObject::connect(saveButton, &QPushButton::clicked, [=]() {
             // TBD
             });
 
+        // TBD
         QObject::connect(cancelButton, &QPushButton::clicked, [=]() {
             // TBD
             });
-        
         
         ///// Element visualization and organization in the layout
     
@@ -132,7 +136,7 @@ public:
 
         //////////////////////////////////////////////////////////////////////////////////////////////
 
-        int expensesNumber{ static_cast<int>(expenses.size()) };
+        expensesNumber = static_cast<int>(expenses.size()) ;
         expensesTable = new tableEdit(expensesNumber, expensesHeaders.length());
 
         expensesTable->setHorizontalHeaderLabels(expensesHeaders);
@@ -156,7 +160,7 @@ public:
         QObject::connect(expensesTable, &QTableWidget::cellChanged, [=](int row, int col) {
             updateTableValues(row, col);
             });
-        
+
         // The initialization of 'iteratorVect' is useful to get a proper removing of the expenses when a "Remove Button" is clicked on.
         iteratorVect.resize(expensesNumber);
         std::iota(iteratorVect.begin(), iteratorVect.end(), 0);
