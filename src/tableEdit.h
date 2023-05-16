@@ -49,7 +49,7 @@ public:
         // Vertical Headers are hidden
         verticalHeader()->hide();
 
-        //setEditTriggers(QAbstractItemView::NoEditTriggers);
+        //setEditTriggers(QAbstractItemView::DoubleClicked);
         setSelectionMode(QAbstractItemView::NoSelection);
 
         // Setting the style of Table (headers and cells)

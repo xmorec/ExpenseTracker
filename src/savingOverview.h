@@ -28,9 +28,6 @@ private:
     tableEdit* expensesTable{};
     std::vector<QStringList> expenses{};
     std::vector<int> iteratorVect{};
-    QPushButton* addExpenseButton{new QPushButton("Add")};
-    QPushButton* saveButton{ new QPushButton("Save") };
-    QPushButton* cancelButton{ new QPushButton("Cancel") };
 
     ////////// ---------- Savings Table Parameters ---------////////////////////////////////
     inline static const QString incomeHeader{ "Income" };
@@ -60,10 +57,27 @@ public:
 
         fillExpensesTable();
 
+        QPushButton* addExpenseButton{ new QPushButton("Add") };
+        QPushButton* saveButton{ new QPushButton("Save") };
+        QPushButton* cancelButton{ new QPushButton("Cancel") };
+
+        QObject::connect(addExpenseButton, & QPushButton::clicked, [=]() {
+            addExpense();
+            });
+
+        QObject::connect(saveButton, &QPushButton::clicked, [=]() {
+            // TBD
+            });
+
+        QObject::connect(cancelButton, &QPushButton::clicked, [=]() {
+            // TBD
+            });
+        
+        
+        ///// Element visualization and organization in the layout
+    
         expensesTable->adaptWidgetToTable();
 
-        ///// Element organization in the layout
-    
         QVBoxLayout* vlay { new QVBoxLayout() };
         QHBoxLayout* hlay{ new QHBoxLayout() };
 
@@ -82,18 +96,25 @@ public:
         addLayout(vlay);
         
 
-
         ///////////////////////////////////////////////////////////////////////////////////////
         ////////// ---------- Overview Saving Table  ---------/////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////
 
-
         fillSavingTable();
+
+        ///// Element visualization and organization in the layout
 
         savingTable->adaptWidgetToTable();      
         addWidget(savingTable);
         setAlignment(savingTable, Qt::AlignLeft);
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
 	}
+
+    void addExpense()
+    {
+    }
 
     void fillExpensesTable()
     {
@@ -187,6 +208,11 @@ public:
             totalExpense = getTotalExpense();
             auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
             savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
+
+            // Setting the 'Savings' value to the table
+            auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+            savings = income - totalExpense;
+            savingTable->item(0, indexSavings)->setText(QString::number(savings));
         }
 
         //If the modified cell was one regarding from Frequency
@@ -212,11 +238,14 @@ public:
             auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
             savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
 
+            // Setting the 'Savings' value to the table
+            auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+            savings = income - totalExpense;
+            savingTable->item(0, indexSavings)->setText(QString::number(savings));
+
         }
 
     }
-
-
 
     void fillSavingTable()
     {
@@ -237,15 +266,19 @@ public:
         auto indexIncome{ savingHeaders.indexOf(incomeHeader) };
         savingTable->setItem(0, indexIncome, new QTableWidgetItem(QString::number(income)));
 
-        // Setting the 'Expenses' value to the table
+        // Setting the 'Expenses' value to the table and making it not editable or selectable by the user
         totalExpense = getTotalExpense();        
         auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-        savingTable->setItem(0, indexTotalExpenses, new QTableWidgetItem(QString::number(totalExpense)));
+        auto totalExpenseItem = new QTableWidgetItem(QString::number(totalExpense));
+        totalExpenseItem->setFlags(totalExpenseItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
+        savingTable->setItem(0, indexTotalExpenses, totalExpenseItem);
 
         // Setting the 'Savings' value to the table
         auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
         savings = income - totalExpense;
-        savingTable->setItem(0, indexSavings, new QTableWidgetItem(QString::number(savings)));
+        auto savingsItem = new QTableWidgetItem(QString::number(savings));
+        savingsItem->setFlags(savingsItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
+        savingTable->setItem(0, indexSavings, savingsItem);
 
     }
 
@@ -292,6 +325,5 @@ public:
         return totalExpense;
 
     }
-
 
 };
