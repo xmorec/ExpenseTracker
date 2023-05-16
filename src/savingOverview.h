@@ -27,6 +27,7 @@ private:
 
     tableEdit* expensesTable{};
     std::vector<QStringList> expenses{};
+    std::vector<int> iteratorVect{};
 
     ////////// ---------- Savings Table Parameters ---------////////////////////////////////
     inline static const QString incomeHeader{ "Income" };
@@ -89,13 +90,13 @@ public:
 
         //////////////////////////////////////////////////////////////////////////////////////////////
 
-
-        expensesTable = new tableEdit(expenses.size(), expensesHeaders.length());
+        int expensesNumber{ static_cast<int>(expenses.size()) };
+        expensesTable = new tableEdit(expensesNumber, expensesHeaders.length());
 
         expensesTable->setHorizontalHeaderLabels(expensesHeaders);
 
         // Adding the expenses values to the table
-        for (int row{ 0 }; row < expenses.size(); ++row)
+        for (int row{ 0 }; row < expensesNumber; ++row)
         {
             for (int col{ 0 }; col < expenses[row].length(); ++col)
             {
@@ -104,9 +105,12 @@ public:
             }
         }
 
-        std::vector<QPushButton*> rmvButtonsVect(expenses.size());
+        // The initialization of 'iteratorVect' is useful to get a proper removing of the expenses when a "Remove Button" is clicked on.
+        iteratorVect.resize(expensesNumber);
+        std::iota(iteratorVect.begin(), iteratorVect.end(), 0);
 
         // Adding remove buttons to the table
+        std::vector<QPushButton*> rmvButtonsVect(expensesNumber);
         for (int row{ 0 }; row < expenses.size(); ++row)
         {
             rmvButtonsVect[row] = new QPushButton("Remove");
@@ -116,6 +120,36 @@ public:
                 });
         }
 
+    }
+
+    void removeExpense(int row)
+    {
+        // Detecting the position of the row to be delated from the relative position 'row'
+        auto rmvPosIt{ std::find(iteratorVect.begin(), iteratorVect.end(), row) };
+        int rmvPos{ static_cast<int>(std::distance(iteratorVect.begin(), rmvPosIt)) };
+
+        // Computing the total amount of the expenses after removing one expense
+        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+        totalExpense -= expenses[rmvPos][indexTotalAmount].toDouble();
+
+        // Setting the 'Expenses' value to the table
+        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+        savingTable->setItem(0, indexTotalExpenses, new QTableWidgetItem(QString::number(totalExpense)));
+
+        // Setting the 'Savings' value to the table
+        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+        savings = income - totalExpense;
+        savingTable->setItem(0, indexSavings, new QTableWidgetItem(QString::number(savings)));
+
+        // Removing the expense from vector and from the table
+        expensesTable->removeRow(rmvPos);
+        expenses.erase(expenses.begin() + rmvPos);
+
+        // Removing the "remove position" from the 'iteratorVect' (this is useful to get a proper row removing)
+        iteratorVect.erase(iteratorVect.begin() + rmvPos);
+
+        // Updating the widget fitting
+        expensesTable->adaptWidgetToTable();
     }
 
     void fillSavingTable()
@@ -155,27 +189,7 @@ public:
 
     }
 
-    void removeExpense(int row)
-    {
-        // Computing the total amount of the expenses after removing one expense
-        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-        totalExpense -= expenses[row][indexTotalAmount].toDouble();
 
-        // Setting the 'Expenses' value to the table
-        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-        savingTable->setItem(0, indexTotalExpenses, new QTableWidgetItem(QString::number(totalExpense)));
 
-        // Setting the 'Savings' value to the table
-        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-        savings = income - totalExpense;
-        savingTable->setItem(0, indexSavings, new QTableWidgetItem(QString::number(savings)));
-
-        // Removing the expense from vector and from the table
-        expensesTable->removeRow(row);
-        expenses.erase(expenses.begin() + row);
-        
-        // Updating the widget fiting
-        expensesTable->adaptWidgetToTable();
-    }
 
 };
