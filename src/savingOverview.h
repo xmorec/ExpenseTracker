@@ -10,7 +10,6 @@ private:
     inline static const QString moneyUnit{ "€" };
 
     ////////// ---------- Expenses Table Parameters ---------////////////////////////////////
-
     inline static const QString expenseHeader{ "Expense" };  
     inline static const QString amountHeader{ "Amount" };
     inline static const QString frequencyHeader{ "Frequency" };
@@ -28,11 +27,12 @@ private:
     tableEdit* expensesTable{};
     std::vector<QStringList> expenses{};
     std::vector<int> iteratorVect{};
-    int expensesNumber{};
 
     QPushButton* addExpenseButton{ new QPushButton("Add") };
     QPushButton* saveButton{ new QPushButton("Save") };
     QPushButton* cancelButton{ new QPushButton("Cancel") };
+    std::vector<QPushButton*> rmvButtonsVect{};
+
 
     ////////// ---------- Savings Table Parameters ---------////////////////////////////////
     inline static const QString incomeHeader{ "Income" };
@@ -118,6 +118,58 @@ public:
 
     void addExpense()
     {
+        // Disabling capturing signals (Cell Changed Signal emision) in order to update the table with a new expense without getting into a conflict 
+        bool emitingSignalState = expensesTable->blockSignals(true);
+                
+        // Creating a new expense with empty values:
+        QStringList newExpense{};
+        newExpense.resize(expensesHeaders.length() - 1);
+                
+        for (int i{ 0 }; i < expensesHeaders.length() - 1; ++i) 
+        {
+            newExpense[i] = QString("");
+        }        
+        expenses.push_back(newExpense);
+
+        //Adding a new row to the table and adapting the widget to it
+        expensesTable->insertRow(expensesTable->rowCount());        
+        expensesTable->adaptWidgetToTable();
+
+        // Filling the newest row of the table with the new created expense (empty values)
+        int newExpensePos = expenses.size() - 1;        
+        copyExpenseToRow(newExpensePos);
+
+        // Adding a new Remove Button pointer to the "Remove buttons vector"
+        rmvButtonsVect.push_back(new QPushButton("Remove"));
+
+        // Updating the internal 'iteratorVect' useful to remove properly the table rows and expenses
+        int rmvSize = rmvButtonsVect.size();
+        iteratorVect.push_back(static_cast<int>(rmvSize -1));
+        
+        // Adding remove buttons to the table
+        expensesTable->setCellWidget(newExpensePos, expensesHeaders.length() - 1, rmvButtonsVect.back());
+        QObject::connect(rmvButtonsVect.back(), &QPushButton::clicked, [=]() {
+            removeExpense(rmvSize -1);
+            });
+
+        //Restoring the blocking signal state of the signals of 'expensesTable'
+        expensesTable->blockSignals(emitingSignalState);        
+       
+    }
+
+    void copyExpenseToRow(int rowPos)
+    {
+        //Values of the expense at position 'rowPos' of 'expenses' vector are copied to each column of table at row 'rowPos'
+        for (int col{ 0 }; col < expenses[rowPos].length(); ++col)
+        {
+            QTableWidgetItem* item{ new QTableWidgetItem(expenses[rowPos][col]) };
+
+            // The column "Total Amount" should not be editable.
+            if (expensesHeaders[col] == totalAmountHeader) {
+                item->setFlags(item->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
+            }
+            expensesTable->setItem(rowPos, col, item);
+        }
     }
 
     void fillExpensesTable()
@@ -136,7 +188,7 @@ public:
 
         //////////////////////////////////////////////////////////////////////////////////////////////
 
-        expensesNumber = static_cast<int>(expenses.size()) ;
+        int expensesNumber = static_cast<int>(expenses.size()) ;
         expensesTable = new tableEdit(expensesNumber, expensesHeaders.length());
 
         expensesTable->setHorizontalHeaderLabels(expensesHeaders);
@@ -144,29 +196,25 @@ public:
         // Adding the expenses values to the table
         for (int row{ 0 }; row < expensesNumber; ++row)
         {
-            for (int col{ 0 }; col < expenses[row].length(); ++col)
-            {
-                QTableWidgetItem* item{ new QTableWidgetItem(expenses[row][col]) };
-                
-                // The column "Total Amount" should not be editable.
-                if (expensesHeaders[col] == totalAmountHeader) {
-                    item->setFlags(item->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
-                }
-                expensesTable->setItem(row, col, item);
-            }
+            //copying the expense at position 'row' of expenses vector to the table at row 'row'
+            copyExpenseToRow(row);
         }
 
-        // Making the table updatable if any cell is modified
+
+        // Making the table updatable if any cell is modified        
         QObject::connect(expensesTable, &QTableWidget::cellChanged, [=](int row, int col) {
             updateTableValues(row, col);
             });
+        
 
         // The initialization of 'iteratorVect' is useful to get a proper removing of the expenses when a "Remove Button" is clicked on.
+        iteratorVect.reserve(expensesNumber + 20);
         iteratorVect.resize(expensesNumber);
         std::iota(iteratorVect.begin(), iteratorVect.end(), 0);
 
         // Adding remove buttons to the table
-        std::vector<QPushButton*> rmvButtonsVect(expensesNumber);
+        rmvButtonsVect.reserve(expensesNumber + 20);
+        rmvButtonsVect.resize(expensesNumber);
         for (int row{ 0 }; row < expenses.size(); ++row)
         {
             rmvButtonsVect[row] = new QPushButton("Remove");
@@ -181,6 +229,11 @@ public:
     void updateTableValues(int row, int col)
     {
         // Updating the modified cell in the expenses vector
+        if (!expensesTable->item(row, col))
+        {
+            expensesTable->setItem(row, col, new QTableWidgetItem("10"));
+        }
+
         auto editedItem{ expensesTable->item(row, col) };
         expenses[row][col] = editedItem->text();
 
@@ -219,7 +272,7 @@ public:
             savingTable->item(0, indexSavings)->setText(QString::number(savings));
         }
 
-        //If the modified cell was one regarding from Frequency
+        //If the modified cell was one regarding from Frequency        
         if (expensesHeaders[col] == frequencyHeader)
         {
             //Getting the Amount item
