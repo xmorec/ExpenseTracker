@@ -11,7 +11,7 @@ private:
     // Code Colors for cells
     inline static const QColor disableColor{ QColor(Qt::gray) };
     inline static const QColor enableColor{ QColor(Qt::white) };
-    inline static const QColor errorColor{ QColor(Qt::magenta) };
+    inline static const QColor errorColor{ "#EA9791"};
 
     // Headers Style:
     inline static const QString headerStyle{ 
@@ -62,7 +62,7 @@ public:
 
     }
 
-    void disableCell(int row, int column, bool disable)
+    void disableCell(int row, int column, bool disable = true)
     {
 
         // Assert code to assure no index is out of range
@@ -92,6 +92,33 @@ public:
 
     }
 
+
+    void setWrongCell(int row, int column, bool wrong = true)
+    {
+
+        // Assert code to assure no index is out of range
+        if (row > rowCount() - 1 || row < 0 || column > columnCount() - 1 || column < 0)
+        {
+            assert(false && "Cannot change the cell status. Index out of range");
+        }
+
+        // Verify if the cell(row,column) has already a QTableWidgetItem assigned to it
+        if (!this->item(row, column)) {
+            this->setItem(row, column, new QTableWidgetItem());
+        }
+        
+        QTableWidgetItem* item{ this->item(row, column)};
+
+        if (wrong) //Setting wrong cell
+        {
+            item->setBackground(errorColor);
+        }
+        else //Not wrong cell: Setting normal color
+        {
+            item->setBackground(enableColor);
+        }
+
+    }
 
     void adaptWidgetToTable(widgetFit wfit = widgetFit::WholeFit)
     {

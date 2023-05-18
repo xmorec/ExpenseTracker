@@ -10,6 +10,7 @@ class savingOverview : public QHBoxLayout
 private:
 
     inline static const QString moneyUnit{ "€" };
+    bool WRONG_CELL_FLAG{ false };
 
     ////////// ---------- Expenses Table Parameters ---------////////////////////////////////
     inline static const QString expenseHeader{ "Expense" };  
@@ -32,7 +33,7 @@ private:
 
     QPushButton* addExpenseButton{ new QPushButton("Add") };
     QPushButton* saveButton{ new QPushButton("Save") };
-    QPushButton* cancelButton{ new QPushButton("Cancel") };
+    QPushButton* cancelButton{ new QPushButton("Restore") };
     std::vector<QPushButton*> rmvButtonsVect{};
 
     ////////// ---------- Savings Table Parameters ---------////////////////////////////////
@@ -55,6 +56,7 @@ private:
 
 public:
 
+    // Constructor of the View with two tables "Expenses Table" and "Savings Table"
 	savingOverview() : QHBoxLayout()
 	{
         ////////////////////////////////////////////////////////////////////////////////////////
@@ -114,6 +116,7 @@ public:
         /////////////////////////////////////////////////////////////////////////////////////////////////////
 	}   
 
+    // Function that generates the Expenses Table
     void fillExpensesTable()
     {
         // Update the expenses vector with the content of Database or a extern file
@@ -165,30 +168,53 @@ public:
 
     }
 
-    void restoreTableValues()
+    // Function that generates the Savings Table
+    void fillSavingTable()
     {
-        // Disabling capturing signals (Cell Changed Signal emision) in order to update the table with previous saved values 
-        bool emitingExpSignalState = expensesTable->blockSignals(true);
-        bool emitingSavSignalState = savingTable->blockSignals(true);
+        //savingTable->resizeColumnsToContents();
+        //savingTable->horizontalHeader()->setDefaultSectionSize(100);
+        if (!savingTable)
+        {
+            savingTable = new tableEdit();
+        }
+        savingTable->setRowCount(1);
+        savingTable->setColumnCount(savingHeaders.length());
 
-        // Cleaning the storing vectors and expense table
-        iteratorVect.clear();
-        rmvButtonsVect.clear();
-        expenses.clear();
-        expensesTable->setRowCount(0);
+        savingTable->setHorizontalHeaderLabels(savingHeaders);
 
-        //Fill again the Expense Table with the last saved values
-        fillExpensesTable();
+        // Extracting the income value of the user from external source
+        generateSavingsFromCSV();
 
-        // Cleaning the saving table and filling it again with the last saved values
-        savingTable->setRowCount(0);
-        fillSavingTable();
+        // Setting the 'Income' value to the table
+        auto indexIncome{ savingHeaders.indexOf(incomeHeader) };
+        savingTable->setItem(0, indexIncome, new QTableWidgetItem(QString::number(income) + " " + moneyUnit));
 
-        //Restoring the blocking signal state of the signals of 'expensesTable'
-        expensesTable->blockSignals(emitingExpSignalState);
-        savingTable->blockSignals(emitingSavSignalState);
+        // Setting the 'Expenses' value to the table and making it not editable or selectable by the user
+        totalExpense = getTotalExpense();
+        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+        auto totalExpenseItem = new QTableWidgetItem(QString::number(totalExpense) + " " + moneyUnit);
+        totalExpenseItem->setFlags(totalExpenseItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
+        savingTable->setItem(0, indexTotalExpenses, totalExpenseItem);
+
+        // Setting the 'Savings' value to the table
+        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+        savings = income - totalExpense;
+        auto savingsItem = new QTableWidgetItem(QString::number(savings) + " " + moneyUnit);
+        savingsItem->setFlags(savingsItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
+        savingTable->setItem(0, indexSavings, savingsItem);
+
+        // Making the table updatable if the income is modified        
+        QObject::connect(savingTable, &QTableWidget::cellChanged, [=](int row, int col) {
+            if (col == indexIncome)
+            {
+                updateTableValues(row, col, savingTable);
+            }
+            });
+
+        savingTable->adaptWidgetToTable();
     }
 
+    // Expenses vector generation from external source
     void generateExpensesFromCSV()
     {
         //This function sets the expenses vector with the content of Database or a CSV file
@@ -259,210 +285,7 @@ public:
         }
     }
     
-    void copyExpenseToRow(int rowPos)
-    {
-        //Values of the expense at position 'rowPos' of 'expenses' vector are copied to each column of table at row 'rowPos'
-        for (int col{ 0 }; col < expenses[rowPos].length(); ++col)
-        {
-            QTableWidgetItem* item{ new QTableWidgetItem(expenses[rowPos][col]) };
-
-            // The column "Total Amount" should not be editable.
-            if (expensesHeaders[col] == totalAmountHeader) {
-                item->setFlags(item->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
-            }
-            expensesTable->setItem(rowPos, col, item);
-        }
-    }
-    
-    void updateTableValues(int row, int col, tableEdit* inputTable)
-    {
-        if (inputTable == expensesTable)
-        {
-            // Updating the expenses vector with the modified cell from expensesTable
-            auto editedItem{ expensesTable->item(row, col) };
-            expenses[row][col] = editedItem->text();
-
-            //If the modified cell was one regarding Expense column
-            if (expensesHeaders[col] == expenseHeader)
-            {
-                // No action needed
-            }
-
-            //If the modified cell was one regarding Amount column
-            if (expensesHeaders[col] == amountHeader)
-            {
-                // Getting the frequency item
-                auto colFrequency{ expensesHeaders.indexOf(frequencyHeader) };
-                auto freqItem{ expensesTable->item(row, colFrequency) };
-
-                // Getting the new double Total Amount value (amount * frequency)
-                double newAmountDouble{ editedItem->text().toDouble() };
-                double newTotalAmountDouble{ newAmountDouble * freqItem->text().toDouble() };
-
-                // Setting the new double Total Amount value to the Table:
-                auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-                expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble));
-
-                // Updating the expenses vector with the new Total Amount value
-                expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
-
-                // Getting the total amount of all Expenses and showing it in the Table
-                totalExpense = getTotalExpense();
-                auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-                savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
-
-                // Setting the 'Savings' value to the table
-                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-                savings = income - totalExpense;
-                savingTable->item(0, indexSavings)->setText(QString::number(savings));
-            }
-
-            //If the modified cell was one regarding from Frequency        
-            if (expensesHeaders[col] == frequencyHeader)
-            {
-                //Getting the Amount item
-                auto colAmount{ expensesHeaders.indexOf(amountHeader) };
-                auto amountItem{ expensesTable->item(row, colAmount) };
-
-                // Getting the new double Total Amount value (amount * frequency)
-                double newFrequencyDouble{ editedItem->text().toDouble() };
-                double newTotalAmountDouble{ newFrequencyDouble * amountItem->text().toDouble() };
-
-                // Setting the new double Total Amount value to the Table:
-                auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-                expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble));
-
-                // Updating the expenses vector with the new Total Amount value
-                expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
-
-                // Getting the total amount of all Expenses and showing it in the Table
-                totalExpense = getTotalExpense();
-                auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-                savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
-
-                // Setting the 'Savings' value to the table
-                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-                savings = income - totalExpense;
-                savingTable->item(0, indexSavings)->setText(QString::number(savings));
-
-            }
-        }
-        if (inputTable == savingTable)
-        {
-            // Updating the expenses vector with the modified cell from expensesTable
-            auto editedItem{ savingTable->item(row, col) };            
-
-            //If the modified cell was the Income cell
-            if (savingHeaders[col] == incomeHeader)
-            {
-                // Computing the new 'income' and 'savings' value
-                income = editedItem->text().toDouble();
-                savings = income - totalExpense;
-
-                // Updating the value of 'savings' in the "Savings Table"
-                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-                savingTable->item(row, indexSavings)->setText(QString::number(savings));
-            }
-
-            // cell = Total Expenses
-            if (savingHeaders[col] == totalExpensesHeader)
-            {
-                // It is not possible to modify this cell because it is disabled for user changes
-            }
-
-            // cell = Savings
-            if (savingHeaders[col] == savingsHeader)
-            {
-                // It is not possible to modify this cell because it is disabled for user changes
-            }
-        }
-    }
-
-    double getTotalExpense()
-    {
-        // Computing the total amount of the expenses
-        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-        totalExpense = 0;
-        for (const auto& expense : expenses)
-        {
-            totalExpense += expense[indexTotalAmount].toDouble();
-        }
-
-        return totalExpense;
-
-    }
-
-    void removeExpense(int row)
-    {
-        // Detecting the position of the row to be delated from the relative position 'row'
-        auto rmvPosIt{ std::find(iteratorVect.begin(), iteratorVect.end(), row) };
-        int rmvPos{ static_cast<int>(std::distance(iteratorVect.begin(), rmvPosIt)) };
-
-        // Computing the total amount of the expenses after removing one expense
-        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-        totalExpense -= expenses[rmvPos][indexTotalAmount].toDouble();
-
-        // Setting the 'Expenses' value to the table
-        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-        savingTable->setItem(0, indexTotalExpenses, new QTableWidgetItem(QString::number(totalExpense)));
-
-        // Setting the 'Savings' value to the table
-        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-        savings = income - totalExpense;
-        savingTable->setItem(0, indexSavings, new QTableWidgetItem(QString::number(savings)));
-
-        // Removing the expense from vector and from the table
-        expensesTable->removeRow(rmvPos);
-        expenses.erase(expenses.begin() + rmvPos);
-
-        // Removing the "remove position" from the 'iteratorVect' (this is useful to get a proper row removing)
-        iteratorVect.erase(iteratorVect.begin() + rmvPos);
-
-        // Updating the widget fitting
-        expensesTable->adaptWidgetToTable();
-    }
-
-    void addExpense()
-    {
-        // Disabling capturing signals (Cell Changed Signal emision) in order to update the table with a new expense without getting into a conflict 
-        bool emitingSignalState = expensesTable->blockSignals(true);
-
-        // Creating a new expense with empty values:
-        QStringList newExpense{};
-        newExpense.resize(expensesHeaders.length() - 1);
-
-        for (int i{ 0 }; i < expensesHeaders.length() - 1; ++i)
-        {
-            newExpense[i] = QString("");
-        }
-        expenses.push_back(newExpense);
-
-        //Adding a new row to the table and adapting the widget to it
-        expensesTable->insertRow(expensesTable->rowCount());
-        expensesTable->adaptWidgetToTable();
-
-        // Filling the newest row of the table with the new created expense (empty values)
-        int newExpensePos = expenses.size() - 1;
-        copyExpenseToRow(newExpensePos);
-
-        // Adding a new Remove Button pointer to the "Remove buttons vector"
-        rmvButtonsVect.push_back(new QPushButton("Remove"));
-
-        // Updating the internal 'iteratorVect' useful to remove properly the table rows and expenses
-        int rmvSize = rmvButtonsVect.size();
-        iteratorVect.push_back(static_cast<int>(rmvSize - 1));
-
-        // Adding remove buttons to the table
-        expensesTable->setCellWidget(newExpensePos, expensesHeaders.length() - 1, rmvButtonsVect.back());
-        QObject::connect(rmvButtonsVect.back(), &QPushButton::clicked, [=]() {
-            removeExpense(rmvSize - 1);
-            });
-
-        //Restoring the blocking signal state of the signals of 'expensesTable'
-        expensesTable->blockSignals(emitingSignalState);
-
-    }
-
+    // Income generation from external source
     void generateSavingsFromCSV()
     {
         //This function sets the Savings data related to the "Savings Table" with the content of Database or a CSV file
@@ -521,6 +344,288 @@ public:
 
     }
 
+    // Copying an Expense to a Table Row
+    void copyExpenseToRow(int rowPos, bool moneyUnitFlag = true)
+    {
+        //Values of the expense at position 'rowPos' of 'expenses' vector are copied to each column of table at row 'rowPos'
+        for (int col{ 0 }; col < expenses[rowPos].length(); ++col)
+        {
+            QTableWidgetItem* item{ new QTableWidgetItem(expenses[rowPos][col]) };
+
+            // The column "Total Amount" should not be editable.
+            if (expensesHeaders[col] == totalAmountHeader) {
+                item->setFlags(item->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
+                
+                // Add the symbol of 'moneyUnit' for the Total Amount column
+                if (expensesHeaders[col] == totalAmountHeader && moneyUnitFlag)
+                {
+                    item->setText(item->text() + " " + moneyUnit);
+                }
+            }
+            // Add the symbol of 'moneyUnit' for the amount column
+            if (expensesHeaders[col] == amountHeader && moneyUnitFlag)
+            {
+                item->setText(item->text() + " " + moneyUnit);
+            }
+            expensesTable->setItem(rowPos, col, item);
+
+        }
+    }
+    
+    // Updating Table values from a user-modification of any cell
+    void updateTableValues(int row, int col, tableEdit* inputTable)
+    {
+        if (inputTable == expensesTable)
+        {
+            // Updating the expenses vector with the modified cell from expensesTable
+            auto editedItem{ expensesTable->item(row, col) };            
+            auto editedItemText = editedItem->text();
+            expenses[row][col] = editedItemText;
+
+            //If the modified cell was one regarding Expense column
+            if (expensesHeaders[col] == expenseHeader)
+            {
+                // No action needed
+            }
+
+            //If the modified cell was one regarding Amount column
+            if (expensesHeaders[col] == amountHeader)
+            {
+                // Checking the format of the cell text. If it is not OK the cell will be background painted and return value will be set to 0.0
+                // Function returns the cell double value
+                double newAmountDouble = setCellAccordingToTextFormat(row, col, expensesTable, true);
+                expenses[row][col] = QString::number(newAmountDouble);
+
+                // Getting the frequency item
+                auto colFrequency{ expensesHeaders.indexOf(frequencyHeader) };
+                auto freqItem{ expensesTable->item(row, colFrequency) };
+
+                // Getting the new double Total Amount value (amount * frequency)
+                //double newAmountDouble{ expenses[row][col].toDouble() };
+                double newTotalAmountDouble{ newAmountDouble * freqItem->text().toDouble() };
+
+                // Setting the new double Total Amount value to the Table:
+                auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+                expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble) + " " + moneyUnit);
+
+                // Updating the expenses vector with the new Total Amount value
+                expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
+
+                // Getting the total amount of all Expenses and showing it in the Table
+                totalExpense = getTotalExpense();
+                auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+                savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense) + " " + moneyUnit);
+
+                // Setting the 'Savings' value to the table
+                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+                savings = income - totalExpense;
+                savingTable->item(0, indexSavings)->setText(QString::number(savings) + " " + moneyUnit);
+            }
+
+            //If the modified cell was one regarding from Frequency        
+            if (expensesHeaders[col] == frequencyHeader)
+            {
+                // Checking the format of the cell text. If it is not OK the cell will be background painted and return value will be set to 0.0
+                // Function returns the cell double value
+                double newFrequencyDouble = setCellAccordingToTextFormat(row, col, expensesTable, false);
+                expenses[row][col] = QString::number(newFrequencyDouble);
+
+                //Getting the Amount item
+                auto colAmount{ expensesHeaders.indexOf(amountHeader) };
+                auto amountItem{ expenses[row][colAmount].toDouble()};
+
+                // Getting the new double Total Amount value (amount * frequency)
+                double newTotalAmountDouble{ newFrequencyDouble * amountItem };
+
+                // Setting the new double Total Amount value to the Table:
+                auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+                expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble) + " " + moneyUnit);
+
+                // Updating the expenses vector with the new Total Amount value
+                expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
+
+                // Getting the total amount of all Expenses and showing it in the Table
+                totalExpense = getTotalExpense();
+                auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+                savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense) + " " + moneyUnit);
+
+                // Setting the 'Savings' value to the table
+                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+                savings = income - totalExpense;
+                savingTable->item(0, indexSavings)->setText(QString::number(savings) + " " + moneyUnit);
+
+            }
+        }
+        if (inputTable == savingTable)
+        {
+            // Updating the expenses vector with the modified cell from expensesTable
+            auto editedItem{ savingTable->item(row, col) };   
+
+            //If the modified cell was the Income cell
+            if (savingHeaders[col] == incomeHeader)
+            {
+                // Checking the format of the 'income' cell text. If it is not OK the cell will be background painted and income will be set to 0.0
+                income = setCellAccordingToTextFormat(row, col, savingTable, true);               
+
+                // Computing the new 'income' and 'savings' value
+                savings = income - totalExpense;
+
+                // Updating the value of 'savings' in the "Savings Table"
+                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+                savingTable->item(row, indexSavings)->setText(QString::number(savings) + " " + moneyUnit);
+            }
+
+            // cell = Total Expenses
+            if (savingHeaders[col] == totalExpensesHeader)
+            {
+                // It is not possible to modify this cell because it is disabled for user changes
+            }
+
+            // cell = Savings
+            if (savingHeaders[col] == savingsHeader)
+            {
+                // It is not possible to modify this cell because it is disabled for user changes
+            }
+        }
+    }
+
+    // Checking cell format and returning the double cell value according its format checking
+    double setCellAccordingToTextFormat(int row, int col, tableEdit* inputTable, bool moneyUnitFlag = false)
+    {
+        // This function checks the text format of the cell [row, col] from the table 'inputTable'. 
+        // If this text format is not OK the cell will be background painted and return value will be set to 0.0
+        // If text format is OK the cell will be backgroung painted as a cell with correct format. In this case, the return value is the cell double value.
+        // The function considers to add into the cell the symbol of 'moneyUnit' depending an input flag 'moneyUnitFlag'
+
+        // Getting the item (row,col) from inputTable
+        auto item = inputTable->item(row, col);
+        auto editedItemText = item->text();
+
+        // Removing the input money symbol shwon in the table
+        if (moneyUnitFlag)
+        {
+            editedItemText.remove(moneyUnit);
+        }
+
+        // 'isDoubleVal' is used to check if the cell value has a double format or not
+        bool isDoubleVal;
+        double cellVal = editedItemText.toDouble(&isDoubleVal);
+
+        // Setting the background color in case 'cellVal' has not a propper double format
+        // Setting the Wrong_flag to "1" in order to avoid saving the data
+        if (!isDoubleVal) {
+            inputTable->setWrongCell(row, col);
+            WRONG_CELL_FLAG = true;
+        }
+        // 'cellVal' has a proper double format and its backgroud is painted in the correct-cell-format style
+        else {
+            inputTable->setWrongCell(row, col, false);
+
+            // Adding or not the moneyUnit symbol to table according the flag 'moneyUnitFlag'
+            if (moneyUnitFlag)
+            {
+                item->setText(QString::number(cellVal) + " " + moneyUnit);
+            }
+            else
+            {
+                item->setText(QString::number(cellVal));
+            }
+            WRONG_CELL_FLAG = false;
+        }
+
+        // cellVal is returned, and it could be 0.0 in case the format was wrong or the cell double value
+        return cellVal;
+    }
+
+    // Total Expense computing from all "Total Amount expenses"
+    double getTotalExpense()
+    {
+        // Computing the total amount of the expenses
+        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+        totalExpense = 0;
+        for (const auto& expense : expenses)
+        {
+            totalExpense += expense[indexTotalAmount].toDouble();
+        }
+
+        return totalExpense;
+
+    }
+
+    // Action from button: Remove Button
+    void removeExpense(int row)
+    {
+        // Detecting the position of the row to be delated from the relative position 'row'
+        auto rmvPosIt{ std::find(iteratorVect.begin(), iteratorVect.end(), row) };
+        int rmvPos{ static_cast<int>(std::distance(iteratorVect.begin(), rmvPosIt)) };
+
+        // Computing the total amount of the expenses after removing one expense
+        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+        totalExpense -= expenses[rmvPos][indexTotalAmount].toDouble();
+
+        // Setting the 'Expenses' value to the table
+        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+        savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense) + " " + moneyUnit);
+
+        // Setting the 'Savings' value to the table
+        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+        savings = income - totalExpense;
+        savingTable->item(0, indexSavings)->setText(QString::number(savings) + " " + moneyUnit);
+
+        // Removing the expense from vector and from the table
+        expensesTable->removeRow(rmvPos);
+        expenses.erase(expenses.begin() + rmvPos);
+
+        // Removing the "remove position" from the 'iteratorVect' (this is useful to get a proper row removing)
+        iteratorVect.erase(iteratorVect.begin() + rmvPos);
+
+        // Updating the widget fitting
+        expensesTable->adaptWidgetToTable();
+    }
+
+    // Action from button: Add Button
+    void addExpense()
+    {
+        // Disabling capturing signals (Cell Changed Signal emision) in order to update the table with a new expense without getting into a conflict 
+        bool emitingSignalState = expensesTable->blockSignals(true);
+
+        // Creating a new expense with empty values:
+        QStringList newExpense{};
+        newExpense.resize(expensesHeaders.length() - 1);
+
+        for (int i{ 0 }; i < expensesHeaders.length() - 1; ++i)
+        {
+            newExpense[i] = QString("");
+        }
+        expenses.push_back(newExpense);
+
+        //Adding a new row to the table and adapting the widget to it
+        expensesTable->insertRow(expensesTable->rowCount());
+        expensesTable->adaptWidgetToTable();
+
+        // Filling the newest row of the table with the new created expense (empty values)
+        int newExpensePos = expenses.size() - 1;
+        copyExpenseToRow(newExpensePos, false);
+
+        // Adding a new Remove Button pointer to the "Remove buttons vector"
+        rmvButtonsVect.push_back(new QPushButton("Remove"));
+
+        // Updating the internal 'iteratorVect' useful to remove properly the table rows and expenses
+        int rmvSize = rmvButtonsVect.size();
+        iteratorVect.push_back(static_cast<int>(rmvSize - 1));
+
+        // Adding remove buttons to the table
+        expensesTable->setCellWidget(newExpensePos, expensesHeaders.length() - 1, rmvButtonsVect.back());
+        QObject::connect(rmvButtonsVect.back(), &QPushButton::clicked, [=]() {
+            removeExpense(rmvSize - 1);
+            });
+
+        //Restoring the blocking signal state of the signals of 'expensesTable'
+        expensesTable->blockSignals(emitingSignalState);
+
+    }
+
+    // Action from button: Save Button
     void saveDataToCSV()
     {
         //This function sets the expenses vector with the content of Database or a CSV file
@@ -528,6 +633,16 @@ public:
         // This msgBox will inform the saving status
         QMessageBox* msgBox = new QMessageBox();
         msgBox->setWindowTitle("Saving Expenses");
+        QIcon icon("resources/icons/saveIcon.png");
+        msgBox->setWindowIcon(icon);
+
+        if (WRONG_CELL_FLAG)
+        {
+            msgBox->setText("You cannot save your expense management until they have a proper format.");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
+            return;
+        }
 
         // CSV Expenses File Path is Opened for being written
         static constexpr char expensesFile[]{ "resources/expenses_files/users/demo/expenses_demo.csv" };
@@ -612,56 +727,36 @@ public:
         std::rename(savingsFileTemp, savingsFile);
 
         msgBox->setText("Your expenses management has been saved!");
-        msgBox->setIcon(QMessageBox::Information);
-        QIcon icon("resources/icons/saveIcon.png");
-        msgBox->setWindowIcon(icon);
+        msgBox->setIcon(QMessageBox::Information);        
         msgBox->exec();
 
     }
 
-    void fillSavingTable()
+    // Action from button: Restore Button
+    void restoreTableValues()
     {
-        //savingTable->resizeColumnsToContents();
-        //savingTable->horizontalHeader()->setDefaultSectionSize(100);
-        if (!savingTable)
-        {
-            savingTable = new tableEdit();
-        }
-        savingTable->setRowCount(1);
-        savingTable->setColumnCount(savingHeaders.length());
+        // Disabling capturing signals (Cell Changed Signal emision) in order to update the table with previous saved values 
+        bool emitingExpSignalState = expensesTable->blockSignals(true);
+        bool emitingSavSignalState = savingTable->blockSignals(true);
 
-        savingTable->setHorizontalHeaderLabels(savingHeaders);
+        // Cleaning the storing vectors and expense table
+        iteratorVect.clear();
+        rmvButtonsVect.clear();
+        expenses.clear();
+        expensesTable->setRowCount(0);
 
-         // Extracting the income value of the user from external source
-        generateSavingsFromCSV();
- 
-        // Setting the 'Income' value to the table
-        auto indexIncome{ savingHeaders.indexOf(incomeHeader) };
-        savingTable->setItem(0, indexIncome, new QTableWidgetItem(QString::number(income)));
+        //Fill again the Expense Table with the last saved values
+        fillExpensesTable();
 
-        // Setting the 'Expenses' value to the table and making it not editable or selectable by the user
-        totalExpense = getTotalExpense();        
-        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-        auto totalExpenseItem = new QTableWidgetItem(QString::number(totalExpense));
-        totalExpenseItem->setFlags(totalExpenseItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
-        savingTable->setItem(0, indexTotalExpenses, totalExpenseItem);
+        // Cleaning the saving table and filling it again with the last saved values
+        savingTable->setRowCount(0);
+        fillSavingTable();
 
-        // Setting the 'Savings' value to the table
-        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-        savings = income - totalExpense;
-        auto savingsItem = new QTableWidgetItem(QString::number(savings));
-        savingsItem->setFlags(savingsItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
-        savingTable->setItem(0, indexSavings, savingsItem);
-
-        // Making the table updatable if the income is modified        
-        QObject::connect(savingTable, &QTableWidget::cellChanged, [=](int row, int col) {
-            if (col == indexIncome) 
-            {
-                updateTableValues(row, col, savingTable);
-            }            
-            });
-
-        savingTable->adaptWidgetToTable();
+        //Restoring the blocking signal state of the signals of 'expensesTable'
+        expensesTable->blockSignals(emitingExpSignalState);
+        savingTable->blockSignals(emitingSavSignalState);
     }
+
+    
 
 };
