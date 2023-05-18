@@ -5,7 +5,8 @@
 
 mainWindow::mainWindow(const QRect& screen)
 {
-
+    QIcon mainIcon ("resources/icons/ExpTrIcon.png");
+    setWindowIcon(mainIcon);
     setWindowTitle("Expense Tracker");
 
     QPushButton* quitButton = new QPushButton("Quit");

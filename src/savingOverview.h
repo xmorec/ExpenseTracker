@@ -71,7 +71,7 @@ public:
 
         // Save the values of Expense Table and the Income value to an external source
         QObject::connect(saveButton, &QPushButton::clicked, [=]() {
-            //saveDataToCSV()
+            saveDataToCSV();
             });
 
         // TBD
@@ -138,7 +138,7 @@ public:
 
         // Making the table updatable if any cell is modified        
         QObject::connect(expensesTable, &QTableWidget::cellChanged, [=](int row, int col) {
-            updateTableValues(row, col);
+            updateTableValues(row, col, expensesTable);
             });        
 
         // The initialization of 'iteratorVect' is useful to get a proper removing of the expenses when a "Remove Button" is clicked on.
@@ -234,12 +234,19 @@ public:
     {
         //This function sets the expenses vector with the content of Database or a CSV file
 
+        // This msgBox will inform the saving status
+        QMessageBox* msgBox = new QMessageBox();
+        msgBox->setWindowTitle("Saving Expenses");
+
         // CSV Expenses File Path is Opened for being written
         static constexpr char expensesFile[]{ "resources/expenses_files/users/demo/expenses_demo.csv" };        
         std::fstream expensesFileStream{ expensesFile };
 
         if (!expensesFileStream)
         {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
             qDebug() << "The file " << expensesFile << " could not be opened\n";
             return;
         }
@@ -249,16 +256,42 @@ public:
 
         if (!tempExpensesFileStream)
         {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
             qDebug() << "The file " << expensesFileTemp << "could not be opened\n";
             return;
         }
+
+        // Exporting the Expense table to the CSV File
+        QStringList exportHeadersExpenses{ expensesHeaders };
+        exportHeadersExpenses.removeAt(expensesHeaders.indexOf(""));
+        exportHeadersExpenses.removeAt(expensesHeaders.indexOf(totalAmountHeader));
+        tempExpensesFileStream << exportHeadersExpenses.join(";").toStdString() << '\n';
         
+        for (auto expense : expenses)
+        {
+            expense.removeAt(expensesHeaders.indexOf(totalAmountHeader));
+            tempExpensesFileStream << expense.join(";").toStdString() << '\n';
+        }        
+                
+        expensesFileStream.close();
+        tempExpensesFileStream.close();
+
+        // Overwrite the Expenses File for the current user
+        std::remove(expensesFile);
+        std::rename(expensesFileTemp, expensesFile);
+
+
         // CSV Savings File Path is Opened for being written
         static constexpr char savingsFile[]{ "resources/expenses_files/users/demo/savings_demo.csv" };
         std::fstream savingsFileStream{ savingsFile };
 
         if (!savingsFileStream)
         {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
             qDebug() << "The file " << savingsFile << " could not be opened\n";
             return;
         }
@@ -268,19 +301,30 @@ public:
 
         if (!tempSavingsFileStream)
         {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
             qDebug() << "The file " << savingsFileTemp << "could not be opened\n";
             return;
         }
 
-        //inline static const QString incomeHeader{ "Income" };
-        //int pos_parameter_income{ -1 };
-        //int pos_parameter_desiredSavings{ -1 };
-        
-        expensesFileStream.close();
-        tempExpensesFileStream.close();
+        // Exporting the Expense table to the CSV File
+        QStringList exportSavingHeaders{ savingHeaders };
+        tempSavingsFileStream << savingHeaders[savingHeaders.indexOf(incomeHeader)].toStdString() << '\n';
+        tempSavingsFileStream << income << '\n';
 
         savingsFileStream.close();
         tempSavingsFileStream.close();
+
+        // Overwrite the Savings File for the current user
+        std::remove(savingsFile);
+        std::rename(savingsFileTemp, savingsFile);
+
+        msgBox->setText("Your expenses management has been saved!");
+        msgBox->setIcon(QMessageBox::Information);
+        QIcon icon("resources/icons/saveIcon.png");
+        msgBox->setWindowIcon(icon);
+        msgBox->exec();
 
     }
 
@@ -329,77 +373,108 @@ public:
         expensesTable->adaptWidgetToTable();
     }
 
-    void updateTableValues(int row, int col)
+    void updateTableValues(int row, int col, tableEdit* inputTable)
     {
-        // Updating the expenses vector with the modified cell from expensesTable
-        auto editedItem{ expensesTable->item(row, col) };
-        expenses[row][col] = editedItem->text();
-
-        //If the modified cell was one regarding Expense column
-        if (expensesHeaders[col] == expenseHeader)
+        if (inputTable == expensesTable)
         {
-            // No action needed
-        }
+            // Updating the expenses vector with the modified cell from expensesTable
+            auto editedItem{ expensesTable->item(row, col) };
+            expenses[row][col] = editedItem->text();
 
-        //If the modified cell was one regarding Amount column
-        if (expensesHeaders[col] == amountHeader)
+            //If the modified cell was one regarding Expense column
+            if (expensesHeaders[col] == expenseHeader)
+            {
+                // No action needed
+            }
+
+            //If the modified cell was one regarding Amount column
+            if (expensesHeaders[col] == amountHeader)
+            {
+                // Getting the frequency item
+                auto colFrequency{ expensesHeaders.indexOf(frequencyHeader) };
+                auto freqItem{ expensesTable->item(row, colFrequency) };
+
+                // Getting the new double Total Amount value (amount * frequency)
+                double newAmountDouble{ editedItem->text().toDouble() };
+                double newTotalAmountDouble{ newAmountDouble * freqItem->text().toDouble() };
+
+                // Setting the new double Total Amount value to the Table:
+                auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+                expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble));
+
+                // Updating the expenses vector with the new Total Amount value
+                expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
+
+                // Getting the total amount of all Expenses and showing it in the Table
+                totalExpense = getTotalExpense();
+                auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+                savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
+
+                // Setting the 'Savings' value to the table
+                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+                savings = income - totalExpense;
+                savingTable->item(0, indexSavings)->setText(QString::number(savings));
+            }
+
+            //If the modified cell was one regarding from Frequency        
+            if (expensesHeaders[col] == frequencyHeader)
+            {
+                //Getting the Amount item
+                auto colAmount{ expensesHeaders.indexOf(amountHeader) };
+                auto amountItem{ expensesTable->item(row, colAmount) };
+
+                // Getting the new double Total Amount value (amount * frequency)
+                double newFrequencyDouble{ editedItem->text().toDouble() };
+                double newTotalAmountDouble{ newFrequencyDouble * amountItem->text().toDouble() };
+
+                // Setting the new double Total Amount value to the Table:
+                auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+                expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble));
+
+                // Updating the expenses vector with the new Total Amount value
+                expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
+
+                // Getting the total amount of all Expenses and showing it in the Table
+                totalExpense = getTotalExpense();
+                auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+                savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
+
+                // Setting the 'Savings' value to the table
+                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+                savings = income - totalExpense;
+                savingTable->item(0, indexSavings)->setText(QString::number(savings));
+
+            }
+        }
+        if (inputTable == savingTable)
         {
-            // Getting the frequency item
-            auto colFrequency{ expensesHeaders.indexOf(frequencyHeader) };
-            auto freqItem{ expensesTable->item(row, colFrequency) };
+            // Updating the expenses vector with the modified cell from expensesTable
+            auto editedItem{ savingTable->item(row, col) };            
 
-            // Getting the new double Total Amount value (amount * frequency)
-            double newAmountDouble{ editedItem->text().toDouble() };
-            double newTotalAmountDouble{ newAmountDouble * freqItem->text().toDouble() };
+            //If the modified cell was the Income cell
+            if (savingHeaders[col] == incomeHeader)
+            {
+                // Computing the new 'income' and 'savings' value
+                income = editedItem->text().toDouble();
+                savings = income - totalExpense;
 
-            // Setting the new double Total Amount value to the Table:
-            auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-            expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble));
+                // Updating the value of 'savings' in the "Savings Table"
+                auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+                savingTable->item(row, indexSavings)->setText(QString::number(savings));
+            }
 
-            // Updating the expenses vector with the new Total Amount value
-            expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
+            // cell = Total Expenses
+            if (savingHeaders[col] == totalExpensesHeader)
+            {
+                // It is not possible to modify this cell because it is disabled for user changes
+            }
 
-            // Getting the total amount of all Expenses and showing it in the Table
-            totalExpense = getTotalExpense();
-            auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-            savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
-
-            // Setting the 'Savings' value to the table
-            auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-            savings = income - totalExpense;
-            savingTable->item(0, indexSavings)->setText(QString::number(savings));
+            // cell = Savings
+            if (savingHeaders[col] == savingsHeader)
+            {
+                // It is not possible to modify this cell because it is disabled for user changes
+            }
         }
-
-        //If the modified cell was one regarding from Frequency        
-        if (expensesHeaders[col] == frequencyHeader)
-        {
-            //Getting the Amount item
-            auto colAmount{ expensesHeaders.indexOf(amountHeader) };
-            auto amountItem{ expensesTable->item(row, colAmount) };
-
-            // Getting the new double Total Amount value (amount * frequency)
-            double newFrequencyDouble{ editedItem->text().toDouble() };
-            double newTotalAmountDouble{ newFrequencyDouble * amountItem->text().toDouble() };
-
-            // Setting the new double Total Amount value to the Table:
-            auto colTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-            expensesTable->item(row, colTotalAmount)->setText(QString::number(newTotalAmountDouble));
-
-            // Updating the expenses vector with the new Total Amount value
-            expenses[row][colTotalAmount] = QString::number(newTotalAmountDouble);
-
-            // Getting the total amount of all Expenses and showing it in the Table
-            totalExpense = getTotalExpense();
-            auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-            savingTable->item(0, indexTotalExpenses)->setText(QString::number(totalExpense));
-
-            // Setting the 'Savings' value to the table
-            auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-            savings = income - totalExpense;
-            savingTable->item(0, indexSavings)->setText(QString::number(savings));
-
-        }
-
     }
 
     double getTotalExpense()
@@ -472,8 +547,8 @@ public:
         }
 
         // expense vector for storing the CSV data is created:
-        std::vector<QStringList> expensesCSV;
-        expensesCSV.reserve(25);
+        std::vector<QStringList> savingsCSV;
+        savingsCSV.reserve(25);
 
         // line by line of CSV is read to store its content in the expensesCSV vector
         std::string line{};
@@ -481,50 +556,38 @@ public:
         {
             QString qline = QString::fromStdString(line);
             qDebug() << qline.split(";") << "\n";
-            expensesCSV.push_back(qline.split(";"));
+            savingsCSV.push_back(qline.split(";"));
         }
 
         // closing CSV file
         savingsFileStream.close();
 
-        // The positions of the headers of the "Expenses Table" are detected in the CSV
-        int expensePos{ static_cast<int>(expensesCSV[0].indexOf(expenseHeader)) };
-        int amountPos{ static_cast<int>(expensesCSV[0].indexOf(amountHeader)) };
-        int freqPos{ static_cast<int>(expensesCSV[0].indexOf(frequencyHeader)) };
+        // The positions of the headers of the "Savings Table" are detected in the CSV
+        int incomePos{ static_cast<int>(savingsCSV[0].indexOf(incomeHeader)) };
+        //int desiredSavingsPos{ static_cast<int>(savingsCSV[0].indexOf(desiredSavingsHeader)) };
 
-        // Memory reservation for the expenses vector
-        expenses.reserve(25);
+        // 'importSavings' is set with every row of 'savingsCSV' whose parameters are sorted according the headers of "Savings Table".
+        QStringList importSavings{};
+        importSavings.resize(savingsCSV[0].length());
 
-        // 'importExpense' is set with every row of 'expensesCSV' whose parameters are sorted according the headers of "Expenses Table".
-        QStringList importExpense{};
-        importExpense.resize(expensesCSV[0].length() + 1);
-
-        for (int row{ 1 }; row < expensesCSV.size(); ++row)
+        for (int row{ 1 }; row < savingsCSV.size(); ++row)
         {
-            for (int col{ 0 }; col < expensesCSV[0].length() + 1; ++col)
+            for (int col{ 0 }; col < savingsCSV[0].length(); ++col)
             {
-                if (col == expensesHeaders.indexOf(expenseHeader))
+                if (col == savingHeaders.indexOf(incomeHeader))
                 {
-                    importExpense[col] = expensesCSV[row][expensePos];
+                    income = savingsCSV[row][incomePos].toDouble();
                 }
-                if (col == expensesHeaders.indexOf(amountHeader))
+                /*
+                if (col == savingHeaders.indexOf(desiredSavingsHeader))
                 {
-                    importExpense[col] = expensesCSV[row][amountPos];
+                    importSavings[col] = savingsCSV[row][desiredSavingsPos];
                 }
-                if (col == expensesHeaders.indexOf(frequencyHeader))
-                {
-                    importExpense[col] = expensesCSV[row][freqPos];
-                }
-                if (col == expensesHeaders.indexOf(totalAmountHeader))
-                {
-                    double totalAmount = expensesCSV[row][amountPos].toDouble() * expensesCSV[row][freqPos].toDouble();
-                    importExpense[col] = QString::number(totalAmount);
-                }
+               */
             }
-            // the sorted row of CSV (expense from CSV) is inserted into 'expenses' vector. 'expenses' vector will be shown in the "Expenses Table".
-            expenses.push_back(importExpense);
-            qDebug() << expenses[row - 1] << "\n";
         }
+
+
     }
 
     void fillSavingTable()
@@ -536,13 +599,9 @@ public:
 
         savingTable->setHorizontalHeaderLabels(savingHeaders);
 
-        ////////////////// EXTRACTING INFORMATION FOR FILLING SAVING TABLE ///////////////////////
-
-        //generateSavingsFromCSV();
-        income = 1900;
-
-        //////////////////////////////////////////////////////////////////////////////////////////////
-
+         // Extracting the income value of the user from external source
+        generateSavingsFromCSV();
+ 
         // Setting the 'Income' value to the table
         auto indexIncome{ savingHeaders.indexOf(incomeHeader) };
         savingTable->setItem(0, indexIncome, new QTableWidgetItem(QString::number(income)));
@@ -560,6 +619,15 @@ public:
         auto savingsItem = new QTableWidgetItem(QString::number(savings));
         savingsItem->setFlags(savingsItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
         savingTable->setItem(0, indexSavings, savingsItem);
+
+        // Making the table updatable if the income is modified        
+        QObject::connect(savingTable, &QTableWidget::cellChanged, [=](int row, int col) {
+            if (col == indexIncome) 
+            {
+                updateTableValues(row, col, savingTable);
+            }            
+            });
+
 
     }
 
