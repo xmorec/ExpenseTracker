@@ -26,7 +26,7 @@ private:
         ""
     }};
 
-    tableEdit* expensesTable{};
+    tableEdit* expensesTable{ nullptr };
     std::vector<QStringList> expenses{};
     std::vector<int> iteratorVect{};
 
@@ -47,7 +47,7 @@ private:
         savingsHeader
     }};
 
-    tableEdit* savingTable{};
+    tableEdit* savingTable{ nullptr };
     double income{};
     double totalExpense{};
     double savings{};
@@ -74,14 +74,12 @@ public:
             saveDataToCSV();
             });
 
-        // TBD
+        // Restore the table values existing in an external Source
         QObject::connect(cancelButton, &QPushButton::clicked, [=]() {
-            // TBD
+            restoreTableValues();
             });
         
-        ///// Element visualization and organization in the layout
-    
-        expensesTable->adaptWidgetToTable();
+        ///// Element visualization and organization in the layout        
 
         QVBoxLayout* vlay { new QVBoxLayout() };
         QHBoxLayout* hlay{ new QHBoxLayout() };
@@ -109,7 +107,6 @@ public:
 
         ///// Element visualization and organization in the layout
 
-        savingTable->adaptWidgetToTable();      
         addWidget(savingTable);
         setAlignment(savingTable, Qt::AlignLeft);
 
@@ -124,7 +121,13 @@ public:
 
         // Create the Expenses Table filled with the values of expenses vector (content from external source)
         int expensesNumber = static_cast<int>(expenses.size()) ;
-        expensesTable = new tableEdit(expensesNumber, expensesHeaders.length());
+        if (!expensesTable)
+        {
+            expensesTable = new tableEdit();
+        }
+        expensesTable->setRowCount(expensesNumber); 
+        expensesTable->setColumnCount(expensesHeaders.length());
+
 
         // Setting the header names of this Table
         expensesTable->setHorizontalHeaderLabels(expensesHeaders);
@@ -158,12 +161,38 @@ public:
                 });
         }
 
+        expensesTable->adaptWidgetToTable();
+
+    }
+
+    void restoreTableValues()
+    {
+        // Disabling capturing signals (Cell Changed Signal emision) in order to update the table with previous saved values 
+        bool emitingExpSignalState = expensesTable->blockSignals(true);
+        bool emitingSavSignalState = savingTable->blockSignals(true);
+
+        // Cleaning the storing vectors and expense table
+        iteratorVect.clear();
+        rmvButtonsVect.clear();
+        expenses.clear();
+        expensesTable->setRowCount(0);
+
+        //Fill again the Expense Table with the last saved values
+        fillExpensesTable();
+
+        // Cleaning the saving table and filling it again with the last saved values
+        savingTable->setRowCount(0);
+        fillSavingTable();
+
+        //Restoring the blocking signal state of the signals of 'expensesTable'
+        expensesTable->blockSignals(emitingExpSignalState);
+        savingTable->blockSignals(emitingSavSignalState);
     }
 
     void generateExpensesFromCSV()
     {
         //This function sets the expenses vector with the content of Database or a CSV file
-
+        
         // CSV File Path is Opened for being read
         static constexpr char expensesFile[]{ "resources/expenses_files/users/demo/expenses_demo.csv" };
         std::fstream expensesFileStream{ expensesFile };        
@@ -230,104 +259,6 @@ public:
         }
     }
     
-    void saveDataToCSV()
-    {
-        //This function sets the expenses vector with the content of Database or a CSV file
-
-        // This msgBox will inform the saving status
-        QMessageBox* msgBox = new QMessageBox();
-        msgBox->setWindowTitle("Saving Expenses");
-
-        // CSV Expenses File Path is Opened for being written
-        static constexpr char expensesFile[]{ "resources/expenses_files/users/demo/expenses_demo.csv" };        
-        std::fstream expensesFileStream{ expensesFile };
-
-        if (!expensesFileStream)
-        {
-            msgBox->setText("ERROR: Your expenses management cold not be saved!");
-            msgBox->setIcon(QMessageBox::Warning);
-            msgBox->exec();
-            qDebug() << "The file " << expensesFile << " could not be opened\n";
-            return;
-        }
-        
-        static constexpr char expensesFileTemp[]{ "resources/expenses_files/users/demo/expenses_demoTemp.csv" };
-        std::ofstream tempExpensesFileStream(expensesFileTemp);
-
-        if (!tempExpensesFileStream)
-        {
-            msgBox->setText("ERROR: Your expenses management cold not be saved!");
-            msgBox->setIcon(QMessageBox::Warning);
-            msgBox->exec();
-            qDebug() << "The file " << expensesFileTemp << "could not be opened\n";
-            return;
-        }
-
-        // Exporting the Expense table to the CSV File
-        QStringList exportHeadersExpenses{ expensesHeaders };
-        exportHeadersExpenses.removeAt(expensesHeaders.indexOf(""));
-        exportHeadersExpenses.removeAt(expensesHeaders.indexOf(totalAmountHeader));
-        tempExpensesFileStream << exportHeadersExpenses.join(";").toStdString() << '\n';
-        
-        for (auto expense : expenses)
-        {
-            expense.removeAt(expensesHeaders.indexOf(totalAmountHeader));
-            tempExpensesFileStream << expense.join(";").toStdString() << '\n';
-        }        
-                
-        expensesFileStream.close();
-        tempExpensesFileStream.close();
-
-        // Overwrite the Expenses File for the current user
-        std::remove(expensesFile);
-        std::rename(expensesFileTemp, expensesFile);
-
-
-        // CSV Savings File Path is Opened for being written
-        static constexpr char savingsFile[]{ "resources/expenses_files/users/demo/savings_demo.csv" };
-        std::fstream savingsFileStream{ savingsFile };
-
-        if (!savingsFileStream)
-        {
-            msgBox->setText("ERROR: Your expenses management cold not be saved!");
-            msgBox->setIcon(QMessageBox::Warning);
-            msgBox->exec();
-            qDebug() << "The file " << savingsFile << " could not be opened\n";
-            return;
-        }
-
-        static constexpr char savingsFileTemp[]{ "resources/expenses_files/users/demo/savings_demoTemp.csv" };
-        std::ofstream tempSavingsFileStream(savingsFileTemp);
-
-        if (!tempSavingsFileStream)
-        {
-            msgBox->setText("ERROR: Your expenses management cold not be saved!");
-            msgBox->setIcon(QMessageBox::Warning);
-            msgBox->exec();
-            qDebug() << "The file " << savingsFileTemp << "could not be opened\n";
-            return;
-        }
-
-        // Exporting the Expense table to the CSV File
-        QStringList exportSavingHeaders{ savingHeaders };
-        tempSavingsFileStream << savingHeaders[savingHeaders.indexOf(incomeHeader)].toStdString() << '\n';
-        tempSavingsFileStream << income << '\n';
-
-        savingsFileStream.close();
-        tempSavingsFileStream.close();
-
-        // Overwrite the Savings File for the current user
-        std::remove(savingsFile);
-        std::rename(savingsFileTemp, savingsFile);
-
-        msgBox->setText("Your expenses management has been saved!");
-        msgBox->setIcon(QMessageBox::Information);
-        QIcon icon("resources/icons/saveIcon.png");
-        msgBox->setWindowIcon(icon);
-        msgBox->exec();
-
-    }
-
     void copyExpenseToRow(int rowPos)
     {
         //Values of the expense at position 'rowPos' of 'expenses' vector are copied to each column of table at row 'rowPos'
@@ -342,37 +273,7 @@ public:
             expensesTable->setItem(rowPos, col, item);
         }
     }
-
-    void removeExpense(int row)
-    {
-        // Detecting the position of the row to be delated from the relative position 'row'
-        auto rmvPosIt{ std::find(iteratorVect.begin(), iteratorVect.end(), row) };
-        int rmvPos{ static_cast<int>(std::distance(iteratorVect.begin(), rmvPosIt)) };
-
-        // Computing the total amount of the expenses after removing one expense
-        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
-        totalExpense -= expenses[rmvPos][indexTotalAmount].toDouble();
-
-        // Setting the 'Expenses' value to the table
-        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
-        savingTable->setItem(0, indexTotalExpenses, new QTableWidgetItem(QString::number(totalExpense)));
-
-        // Setting the 'Savings' value to the table
-        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
-        savings = income - totalExpense;
-        savingTable->setItem(0, indexSavings, new QTableWidgetItem(QString::number(savings)));
-
-        // Removing the expense from vector and from the table
-        expensesTable->removeRow(rmvPos);
-        expenses.erase(expenses.begin() + rmvPos);
-
-        // Removing the "remove position" from the 'iteratorVect' (this is useful to get a proper row removing)
-        iteratorVect.erase(iteratorVect.begin() + rmvPos);
-
-        // Updating the widget fitting
-        expensesTable->adaptWidgetToTable();
-    }
-
+    
     void updateTableValues(int row, int col, tableEdit* inputTable)
     {
         if (inputTable == expensesTable)
@@ -491,6 +392,36 @@ public:
 
     }
 
+    void removeExpense(int row)
+    {
+        // Detecting the position of the row to be delated from the relative position 'row'
+        auto rmvPosIt{ std::find(iteratorVect.begin(), iteratorVect.end(), row) };
+        int rmvPos{ static_cast<int>(std::distance(iteratorVect.begin(), rmvPosIt)) };
+
+        // Computing the total amount of the expenses after removing one expense
+        auto indexTotalAmount{ expensesHeaders.indexOf(totalAmountHeader) };
+        totalExpense -= expenses[rmvPos][indexTotalAmount].toDouble();
+
+        // Setting the 'Expenses' value to the table
+        auto indexTotalExpenses{ savingHeaders.indexOf(totalExpensesHeader) };
+        savingTable->setItem(0, indexTotalExpenses, new QTableWidgetItem(QString::number(totalExpense)));
+
+        // Setting the 'Savings' value to the table
+        auto indexSavings{ savingHeaders.indexOf(savingsHeader) };
+        savings = income - totalExpense;
+        savingTable->setItem(0, indexSavings, new QTableWidgetItem(QString::number(savings)));
+
+        // Removing the expense from vector and from the table
+        expensesTable->removeRow(rmvPos);
+        expenses.erase(expenses.begin() + rmvPos);
+
+        // Removing the "remove position" from the 'iteratorVect' (this is useful to get a proper row removing)
+        iteratorVect.erase(iteratorVect.begin() + rmvPos);
+
+        // Updating the widget fitting
+        expensesTable->adaptWidgetToTable();
+    }
+
     void addExpense()
     {
         // Disabling capturing signals (Cell Changed Signal emision) in order to update the table with a new expense without getting into a conflict 
@@ -590,12 +521,114 @@ public:
 
     }
 
+    void saveDataToCSV()
+    {
+        //This function sets the expenses vector with the content of Database or a CSV file
+
+        // This msgBox will inform the saving status
+        QMessageBox* msgBox = new QMessageBox();
+        msgBox->setWindowTitle("Saving Expenses");
+
+        // CSV Expenses File Path is Opened for being written
+        static constexpr char expensesFile[]{ "resources/expenses_files/users/demo/expenses_demo.csv" };
+        std::fstream expensesFileStream{ expensesFile };
+
+        if (!expensesFileStream)
+        {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
+            qDebug() << "The file " << expensesFile << " could not be opened\n";
+            return;
+        }
+
+        static constexpr char expensesFileTemp[]{ "resources/expenses_files/users/demo/expenses_demoTemp.csv" };
+        std::ofstream tempExpensesFileStream(expensesFileTemp);
+
+        if (!tempExpensesFileStream)
+        {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
+            qDebug() << "The file " << expensesFileTemp << "could not be opened\n";
+            return;
+        }
+
+        // Exporting the Expense table to the CSV File
+        QStringList exportHeadersExpenses{ expensesHeaders };
+        exportHeadersExpenses.removeAt(expensesHeaders.indexOf(""));
+        exportHeadersExpenses.removeAt(expensesHeaders.indexOf(totalAmountHeader));
+        tempExpensesFileStream << exportHeadersExpenses.join(";").toStdString() << '\n';
+
+        for (auto expense : expenses)
+        {
+            expense.removeAt(expensesHeaders.indexOf(totalAmountHeader));
+            tempExpensesFileStream << expense.join(";").toStdString() << '\n';
+        }
+
+        expensesFileStream.close();
+        tempExpensesFileStream.close();
+
+        // Overwrite the Expenses File for the current user
+        std::remove(expensesFile);
+        std::rename(expensesFileTemp, expensesFile);
+
+
+        // CSV Savings File Path is Opened for being written
+        static constexpr char savingsFile[]{ "resources/expenses_files/users/demo/savings_demo.csv" };
+        std::fstream savingsFileStream{ savingsFile };
+
+        if (!savingsFileStream)
+        {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
+            qDebug() << "The file " << savingsFile << " could not be opened\n";
+            return;
+        }
+
+        static constexpr char savingsFileTemp[]{ "resources/expenses_files/users/demo/savings_demoTemp.csv" };
+        std::ofstream tempSavingsFileStream(savingsFileTemp);
+
+        if (!tempSavingsFileStream)
+        {
+            msgBox->setText("ERROR: Your expenses management cold not be saved!");
+            msgBox->setIcon(QMessageBox::Warning);
+            msgBox->exec();
+            qDebug() << "The file " << savingsFileTemp << "could not be opened\n";
+            return;
+        }
+
+        // Exporting the Expense table to the CSV File
+        QStringList exportSavingHeaders{ savingHeaders };
+        tempSavingsFileStream << savingHeaders[savingHeaders.indexOf(incomeHeader)].toStdString() << '\n';
+        tempSavingsFileStream << income << '\n';
+
+        savingsFileStream.close();
+        tempSavingsFileStream.close();
+
+        // Overwrite the Savings File for the current user
+        std::remove(savingsFile);
+        std::rename(savingsFileTemp, savingsFile);
+
+        msgBox->setText("Your expenses management has been saved!");
+        msgBox->setIcon(QMessageBox::Information);
+        QIcon icon("resources/icons/saveIcon.png");
+        msgBox->setWindowIcon(icon);
+        msgBox->exec();
+
+    }
+
     void fillSavingTable()
     {
         //savingTable->resizeColumnsToContents();
         //savingTable->horizontalHeader()->setDefaultSectionSize(100);
-
-        savingTable = new tableEdit(1, savingHeaders.length());
+        if (!savingTable)
+        {
+            savingTable = new tableEdit();
+        }
+        savingTable->setRowCount(1);
+        savingTable->setColumnCount(savingHeaders.length());
 
         savingTable->setHorizontalHeaderLabels(savingHeaders);
 
@@ -628,7 +661,7 @@ public:
             }            
             });
 
-
+        savingTable->adaptWidgetToTable();
     }
 
 };
