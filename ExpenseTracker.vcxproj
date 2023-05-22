@@ -88,7 +88,7 @@
     <ClCompile Include="src\mainWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\loggingWindow.h" />
+    <QtMoc Include="src\loggingWindow.h" />
     <ClInclude Include="src\savingOverview.h" />
     <QtMoc Include="src\tableEdit.h" />
     <ClInclude Include="src\mainWindow.h" />

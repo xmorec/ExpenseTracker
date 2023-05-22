@@ -37,9 +37,6 @@
     <ClInclude Include="src\savingOverview.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\loggingWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="resources\Resource.qrc">
@@ -48,6 +45,9 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="src\tableEdit.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="src\loggingWindow.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

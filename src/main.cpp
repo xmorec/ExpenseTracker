@@ -8,13 +8,18 @@ int main(int argc, char* argv[])
 {
 
 
-QApplication app(argc, argv);
+    QApplication app(argc, argv);
 
-loggingWindow* loggWin{ new loggingWindow() };
+    loggingWindow* loggWin{ new loggingWindow() };
 
-
-mainWindow* window = new mainWindow(app.primaryScreen()->availableGeometry());
-
+    if (loggWin->getLoggingStatus() == true)
+    {
+        mainWindow* window = new mainWindow(app.primaryScreen()->availableGeometry());
+        return app.exec();
+    }
+    else {
+        return 0;
+    }
      
-return app.exec();
+    
 }
