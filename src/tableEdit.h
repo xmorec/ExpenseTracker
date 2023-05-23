@@ -1,6 +1,12 @@
 ﻿#pragma once
 #include <QtWidgets>
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Description:                                                                         
+// It creates a custom table with own style to create Tables in the Expense Tracker.
+// It also has the functionality to enable/disable cells with specific parameters. 
+//////////////////////////////////////////////////////////////////////////////////////////
+
 class tableEdit : public QTableWidget
 {
 
@@ -56,7 +62,7 @@ public:
         horizontalHeader()->setStyleSheet(headerStyle);
         setStyleSheet(cellStyle);
 
-        // Disabling the user resizes columns and headers manually
+        // Disabling the user resizing columns and headers manually
         horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
@@ -148,6 +154,7 @@ public:
 
     int getTableWidth()
     {
+        // Computing the vertical header width
         tableWidth = verticalHeader()->width();
 
         // Computing table width (without borders)
@@ -164,15 +171,16 @@ public:
 
     int getTableHeight()
     {
+        // Computing the horizontal header height
         tableHeight = horizontalHeader()->height();
 
-        // Computing table height
+        // Adding table rows height
         for (int i{ 0 }; i < rowCount(); ++i)
         {
             tableHeight += rowHeight(i);
         }
 
-        // Add table borders width
+        // Adding table borders 
         tableHeight += 2 * frameWidth();
 
         return tableHeight;

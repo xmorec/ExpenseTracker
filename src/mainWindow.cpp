@@ -8,13 +8,14 @@ mainWindow::mainWindow(const QRect& screen)
     setWindowIcon(QIcon("resources/icons/ExpTrIcon.png"));
     setWindowTitle("Expense Tracker");
 
-    QPushButton* quitButton = new QPushButton("Quit");
-    QWidget* centralWidget = new QWidget();
-    QVBoxLayout* mainVLayout = new QVBoxLayout();
-    
+    // Set Fixed Window size (user cannot resize it)
+    //setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 
-    QObject::connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
-    mainVLayout->addWidget(quitButton);
+    QWidget* centralWidget = new QWidget();
+    QVBoxLayout* mainVLayout = new QVBoxLayout();    
+
+    //QObject::connect(quitButton, SIGNAL(clicked()), qApp, SLOT(quit()));
+    //mainVLayout->addWidget(quitButton);
 
     // Sizing the Main Window
     int width = screen.width() * widthFactor;

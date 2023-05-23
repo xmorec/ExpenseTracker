@@ -3,6 +3,11 @@
 #include "labelButton.h"
 #include "User.h"
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Description:                                                                         
+// It creates the Window (QDialog) for managing the logging in session and user creation
+//////////////////////////////////////////////////////////////////////////////////////////
+
 class loggingWindow : public QDialog
 {
 
@@ -62,6 +67,8 @@ public:
 		// Hiding the plain password
 		passEdit->setEchoMode(QLineEdit::Password);
 		
+		// Load Users from DB and store them in 'users' vector
+		LoadUsersFromDB();
 
 		QObject::connect(createUserButton, &QPushButton::clicked, [=]() {
 			uploadCreateUserView();
@@ -82,7 +89,8 @@ public:
 		exec();
 	}
 
-	void getUsersFromDB()
+	//Load Users from DB and store them in 'users' vector
+	void LoadUsersFromDB()
 	{
 		QString userN1{ "Xavi" };
 		QString userN2{ "lara" };
@@ -103,50 +111,36 @@ public:
 	{
 		//QIcon icon("resources/icons/saveIcon.png");
 		//userInfoBox->setWindowIcon(icon);
-		userInfoBox->setWindowTitle("Loggin In");
+		userInfoBox->setWindowTitle("Logging In");
 		QString inputUserName = userEdit->text();		
-		bool userFound{ false };
-		bool correctPassword{ false };
 
-		for (auto user : users)
+		// Finds if user exists with the input user name
+		auto userIt = std::find_if(users.begin(), users.end(), [=](User* userx) { return inputUserName.toLower() == userx->getUserName().toLower(); });
+
+		if(!(userIt == users.end())) // User exists with the input user name
 		{
-			if (inputUserName.toLower() == user->getUserName().toLower())
-			{				
-				userFound = true;
-				QString inputPass{ passEdit->text() };
-				//QString userSalt{user->getSalt()};
-				QString userSalt{ QString::fromUtf8(user->getSaltDB())};
-				if (hashPassword(inputPass, userSalt) == QString::fromUtf8(user->getHashPasswordDB()))
-				{
-					correctPassword = true;
-				}
+			QString inputPass{ passEdit->text() };
+			QString userSalt{ QString::fromUtf8((*userIt)->getSaltDB())};
 
-				break;
-			}
-		}
-
-		if (userFound)
-		{
-			if (correctPassword)
+			// Checks if the input password is the correct one for the selected user
+			if (hashPassword(inputPass, userSalt) == QString::fromUtf8((*userIt)->getHashPasswordDB()))
 			{
 				loggingStatus = true;
 				this->close();
 			}
-			else // User found but the input password is wrong
+			else // Incorrect password
 			{
-				userInfoBox->setText("Incorrect Password");
+				userInfoBox->setText("Incorrect Password.");
 				userInfoBox->setIcon(QMessageBox::Warning);
 				userInfoBox->exec();
 			}
 		}
-		else //User not found
+		else // User does not exist with the input user name
 		{
 			userInfoBox->setText("User not found.");
 			userInfoBox->setIcon(QMessageBox::Warning);
 			userInfoBox->exec();
-
 		}
-
 	}
 
 	void createUser()
@@ -158,7 +152,7 @@ public:
 		{
 			User* newUser{ new User(newUsername) };
 			QString plainPassword{ passEdit->text() };
-			QString userSalt{ generateSalt()};
+			QString userSalt{ generateSalt(8)};
 			QString hashPass{ hashPassword(plainPassword, userSalt) };
 			newUser->setHashPassword(hashPass);
 			newUser->setSalt(userSalt);
@@ -186,22 +180,20 @@ public:
 		return hashPassword;
 	}
 
-	QString generateSalt()
+	QString generateSalt(int saltSize = 8)
 	{
-		static const int saltSize = 8; // Salt size (bytes)
-
-		
+		//SaltSize is the 'Salt' in bytes.
+				
 		QByteArray saltByteArray{};
 		saltByteArray.resize(saltSize);
 
-		for (int i = 0; i < saltSize; ++i) {
-			saltByteArray[i] = static_cast<char>(QRandomGenerator::system()->generate());;
-			qDebug() << "saltByteArray[i] is: " << saltByteArray[i];
+		for (int i = 0; i < saltSize; ++i) 
+		{
+			saltByteArray[i] = static_cast<char>(QRandomGenerator::system()->generate());
 		}
 
 		return QString::fromLatin1(saltByteArray);
 	}
-
 
 
 	bool isCorrectNameFormat(const QString& newUsername)
@@ -237,7 +229,6 @@ public:
 		}
 
 		return true;
-
 	}
 	
 	void uploadCreateUserView()

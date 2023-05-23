@@ -1,10 +1,13 @@
 ﻿#pragma once
 #include <QtWidgets>
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Description:                                                                         
+// It manages the information of the User
+//////////////////////////////////////////////////////////////////////////////////////////
+
 class User
 {
-
-//Q_OBJECT
 
 private:
 	QString userName{};
@@ -16,9 +19,7 @@ private:
 
 public:
 	User(const QString& inputName) : userName(inputName)
-	{
-		
-	}
+	{	}
 
 	const QString& getUserName()
 	{

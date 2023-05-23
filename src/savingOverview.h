@@ -4,6 +4,12 @@
 #include <fstream>
 #include <iostream>
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Description:                                                                         
+// It creates the view of Expenses and Savings Tables, adds the functionality of adding or
+// removing Expenses, managing them, and loading values from external sources as well
+//////////////////////////////////////////////////////////////////////////////////////////
+
 class savingOverview : public QHBoxLayout
 {
 
@@ -12,12 +18,14 @@ private:
     inline static const QString moneyUnit{ "€" };
     bool WRONG_CELL_FLAG{ false };
 
-    ////////// ---------- Expenses Table Parameters ---------////////////////////////////////
+    ////////// ---------- Expenses Table Parameters --------- //////////////////////////////
+    // Horizontal Header Table Titles:
     inline static const QString expenseHeader{ "Expense" };  
     inline static const QString amountHeader{ "Amount" };
     inline static const QString frequencyHeader{ "Frequency" };
     inline static const QString totalAmountHeader{ "Total Amount" };
- 
+    
+    // Horizontal Header Table Titles (QStringList):
     inline static const QStringList expensesHeaders
     {{
         expenseHeader,
@@ -27,20 +35,23 @@ private:
         ""
     }};
 
-    tableEdit* expensesTable{ nullptr };
-    std::vector<QStringList> expenses{};
-    std::vector<int> iteratorVect{};
+    tableEdit* expensesTable{ nullptr }; // Expenses Table pointer
+    std::vector<QStringList> expenses{}; // Expenses Vector that stores every expense
+    std::vector<int> iteratorVect{}; // Useful vector storing iterators (indexs)
 
+    // Button Section
     QPushButton* addExpenseButton{ new QPushButton("Add") };
     QPushButton* saveButton{ new QPushButton("Save") };
     QPushButton* cancelButton{ new QPushButton("Restore") };
-    std::vector<QPushButton*> rmvButtonsVect{};
+    std::vector<QPushButton*> rmvButtonsVect{}; // Vector of "Remove Buttons"
 
-    ////////// ---------- Savings Table Parameters ---------////////////////////////////////
+    ////////// ---------- Savings Table Parameters --------- //////////////////////////////
+    // Horizontal Header Table Titles:
     inline static const QString incomeHeader{ "Income" };
     inline static const QString totalExpensesHeader{ "Expenses" };
     inline static const QString savingsHeader{ "Savings" };
 
+    // Horizontal Header Table Titles (QStringList):
     inline static const QStringList savingHeaders
     {{
         incomeHeader,
@@ -48,10 +59,10 @@ private:
         savingsHeader
     }};
 
-    tableEdit* savingTable{ nullptr };
-    double income{};
-    double totalExpense{};
-    double savings{};
+    tableEdit* savingTable{ nullptr }; // Saving Table pointer
+    double income{}; // Income value
+    double totalExpense{}; // The total amount of ALL expenses
+    double savings{}; // The Savings value
     
 
 public:
@@ -756,7 +767,5 @@ public:
         expensesTable->blockSignals(emitingExpSignalState);
         savingTable->blockSignals(emitingSavSignalState);
     }
-
-    
 
 };
