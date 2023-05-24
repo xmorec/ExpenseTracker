@@ -84,8 +84,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\labelButton.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mainWindow.cpp" />
+    <ClCompile Include="src\savingOverview.cpp" />
+    <ClCompile Include="src\loggingWindow.cpp" />
+    <ClCompile Include="src\tableEdit.cpp" />
+    <ClCompile Include="src\User.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\User.h" />
