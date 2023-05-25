@@ -1,5 +1,9 @@
-﻿#pragma once
-#include <QtWidgets>
+﻿#ifndef TABLEEDIT_H
+#define TABLEEDIT_H
+
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QString>
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -70,3 +74,4 @@ public:
 
 };
 
+#endif

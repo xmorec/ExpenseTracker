@@ -3,10 +3,10 @@
 // Generates the main QDialog for the Logging Session
 loggingWindow::loggingWindow() : QDialog()
 {
-	setWindowIcon(QIcon("resources/icons/ExpTrIcon.png"));
+	setWindowIcon(QIcon(icons::expTrackerIcon));
 	setWindowTitle("Sign In");
 
-	userInfoBox->setWindowIcon(QIcon("resources/icons/logsession.png"));
+	userInfoBox->setWindowIcon(QIcon(icons::loggingIcon));
 
 	// Set fixed Dialog size (user cannot resize it)
 	setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);

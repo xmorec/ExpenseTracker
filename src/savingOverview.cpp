@@ -459,7 +459,7 @@ double savingOverview::setCellAccordingToTextFormat(int row, int col, tableEdit*
     // Setting the Wrong_flag to "1" in order to avoid saving the data
     if (!isDoubleVal) {
         inputTable->setWrongCell(row, col);
-        WRONG_CELL_FLAG = true;
+        wrongCellFlag = true;
     }
     // 'cellVal' has a proper double format and its backgroud is painted in the correct-cell-format style
     else {
@@ -474,7 +474,7 @@ double savingOverview::setCellAccordingToTextFormat(int row, int col, tableEdit*
         {
             item->setText(QString::number(cellVal));
         }
-        WRONG_CELL_FLAG = false;
+        wrongCellFlag = false;
     }
 
     // cellVal is returned, and it could be 0.0 in case the format was wrong or the cell double value
@@ -577,10 +577,9 @@ void savingOverview::saveDataToCSV()
     // This msgBox will inform the saving status
     QMessageBox* msgBox = new QMessageBox();
     msgBox->setWindowTitle("Saving Expenses");
-    QIcon icon("resources/icons/saveIcon.png");
-    msgBox->setWindowIcon(icon);
+    msgBox->setWindowIcon(QIcon(icons::saveIcon));
 
-    if (WRONG_CELL_FLAG)
+    if (wrongCellFlag)
     {
         msgBox->setText("You cannot save your expense management until they have a proper format.");
         msgBox->setIcon(QMessageBox::Warning);

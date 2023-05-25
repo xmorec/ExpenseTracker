@@ -1,11 +1,10 @@
 ﻿#include "mainWindow.h"
-#include "tableEdit.h"
-#include "savingOverview.h"
+
 
 
 mainWindow::mainWindow(const QRect& screen)
 {
-    setWindowIcon(QIcon("resources/icons/ExpTrIcon.png"));
+    setWindowIcon(QIcon(icons::expTrackerIcon));
     setWindowTitle("Expense Tracker");
 
     // Set Fixed Window size (user cannot resize it)

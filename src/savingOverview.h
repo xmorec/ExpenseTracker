@@ -1,8 +1,13 @@
-﻿#pragma once
-#include <QtWidgets>
-#include "tableEdit.h"
+﻿#ifndef SAVINGOVERVIEW_H
+#define SAVINGOVERVIEW_H
+
+#include <QHBoxLayout>
+#include <QString>
+#include <QMessageBox>
+#include <QPushButton>
 #include <fstream>
-#include <iostream>
+#include "constants.h"
+#include "tableEdit.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -16,7 +21,7 @@ class savingOverview : public QHBoxLayout
 private:
 
     inline static const QString moneyUnit{ "€" };
-    bool WRONG_CELL_FLAG{ false };
+    bool wrongCellFlag{ false };
 
     ////////// ---------- Expenses Table Parameters --------- //////////////////////////////
     // Horizontal Header Table Titles:
@@ -107,3 +112,5 @@ public:
     void restoreTableValues();
 
 };
+
+#endif

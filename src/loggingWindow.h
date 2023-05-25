@@ -1,7 +1,19 @@
-﻿#pragma once
-#include <QtWidgets>
-#include "labelButton.h"
+﻿#ifndef LOGGINGWINDOW_H
+#define LOGGINGWINDOW_H
+
+#include <QBoxLayout>
+#include <QLineEdit>
+#include <QString>
+#include <QPushButton>
+#include <QLabel>
+#include <QDialog>
+#include <QMessageBox>
+#include <QCryptographicHash>
+#include <QRandomGenerator>
+#include <QRegularExpression>
 #include "User.h"
+#include "constants.h"
+#include "labelButton.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -70,3 +82,5 @@ public:
 	bool getLoggingStatus();
 	
 };
+
+#endif

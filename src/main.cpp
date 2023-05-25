@@ -1,4 +1,5 @@
-﻿#include <QtWidgets>
+﻿#include <QApplication>
+#include <QScreen>
 #include "mainWindow.h"
 #include "loggingWindow.h"
 

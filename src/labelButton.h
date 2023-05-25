@@ -1,5 +1,8 @@
-﻿#pragma once
-#include <QtWidgets>
+﻿#ifndef LABELBUTTON_H
+#define LABELBUTTON_H
+
+#include <QPushButton>
+#include <QString>
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:
@@ -18,3 +21,5 @@ public:
 	labelButton(const QString& textButton);
 
 };
+
+#endif

@@ -1,5 +1,11 @@
-﻿#pragma once
-#include <QtWidgets>
+﻿#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+
+#include <QMainWindow>
+#include <QRect>
+#include "constants.h"
+#include "tableEdit.h"
+#include "savingOverview.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -24,3 +30,4 @@ public:
 
 };
 
+#endif

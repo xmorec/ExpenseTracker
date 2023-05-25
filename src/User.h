@@ -1,5 +1,8 @@
-﻿#pragma once
-#include <QtWidgets>
+﻿#ifndef USER_H
+#define USER_H
+
+#include <QString>
+#include <QByteArray>
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -17,6 +20,7 @@ private:
 	QByteArray saltDB{};
 	QByteArray hashPasswordDB{};
 
+	
 public:
 	User(const QString& inputName) : userName(inputName)
 	{	}
@@ -67,3 +71,5 @@ public:
 	}
 
 };
+
+#endif
