@@ -59,6 +59,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
@@ -84,25 +90,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lib\sqlite3.c" />
     <ClCompile Include="src\labelButton.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mainWindow.cpp" />
     <ClCompile Include="src\savingOverview.cpp" />
     <ClCompile Include="src\loggingWindow.cpp" />
+    <ClCompile Include="src\sql_functions.cpp" />
     <ClCompile Include="src\tableEdit.cpp" />
     <ClCompile Include="src\User.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\constants.h" />
+    <ClInclude Include="src\sql_functions.h" />
     <ClInclude Include="src\User.h" />
     <QtMoc Include="src\loggingWindow.h" />
     <QtMoc Include="src\labelButton.h" />
     <ClInclude Include="src\savingOverview.h" />
     <QtMoc Include="src\tableEdit.h" />
     <ClInclude Include="src\mainWindow.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtRcc Include="resources\Resource.qrc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

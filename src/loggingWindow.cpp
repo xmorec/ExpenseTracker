@@ -3,6 +3,8 @@
 // Generates the main QDialog for the Logging Session
 loggingWindow::loggingWindow() : QDialog()
 {
+	testMyDB();
+
 	setWindowIcon(QIcon(icons::expTrackerIcon));
 	setWindowTitle("Sign In");
 
@@ -155,9 +157,40 @@ void loggingWindow::createUser()
 
 		// Adding the new user to 'users' vector
 		users.push_back(newUser);
-		userInfoBox->setText("User Created!");
-		userInfoBox->setIcon(QMessageBox::Information);
-		userInfoBox->exec();
+
+
+		// Adding new user to Database
+		if (isDBExisting())
+		{
+			sqlite3* db{};
+			if (openSQLiteDB(db))
+			{
+				std::string newUsernameStr{ newUsername.toStdString()};
+				std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toStdString() + "','" + hashPass.toStdString() + "','user'"};				
+
+				std::string tableName{"Users"};
+				if (isTableCreated(db, tableName) == 1) 
+				{
+					if (insertRecord(db, tableName, values))
+					{
+						userInfoBox->setIcon(QMessageBox::Information);
+						userInfoBox->setText("User Created!");
+					}
+					else
+					{
+						userInfoBox->setIcon(QMessageBox::Warning);
+						userInfoBox->setText("User could not be created!");
+					}					
+				}
+				else
+				{
+					userInfoBox->setIcon(QMessageBox::Warning);
+					userInfoBox->setText("User could not be created (no table found)!");
+				}
+				userInfoBox->exec();
+				closeSQLiteDB(db);
+			}			
+		}		
 
 		// The Logging View is loaded
 		loadLoggingView();

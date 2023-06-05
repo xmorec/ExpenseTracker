@@ -14,6 +14,7 @@
 #include "User.h"
 #include "constants.h"
 #include "labelButton.h"
+#include "sql_functions.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
