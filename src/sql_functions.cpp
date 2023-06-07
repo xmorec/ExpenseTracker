@@ -129,8 +129,11 @@ bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& 
 	int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
 	if (rc != SQLITE_OK)
 	{
-		std::cout << "Failure in Inserting\n";
 		sqlite3_finalize(stmt);
+		qDebug() << "\n---------- rc = " << rc;
+		const char* errorMessage = sqlite3_errmsg(db);
+		qDebug() << "\n\n****************\n\n\nError message: " << errorMessage << "\n\n\n\n\n";
+
 		return false;
 	}
 

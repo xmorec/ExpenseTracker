@@ -155,10 +155,6 @@ void loggingWindow::createUser()
 		newUser->setHashPasswordDB(hashPass.toUtf8());
 		newUser->setSaltDB(userSalt.toUtf8());
 
-		// Adding the new user to 'users' vector
-		users.push_back(newUser);
-
-
 		// Adding new user to Database
 		if (isDBExisting())
 		{
@@ -166,13 +162,26 @@ void loggingWindow::createUser()
 			if (openSQLiteDB(db))
 			{
 				std::string newUsernameStr{ newUsername.toStdString()};
-				std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toStdString() + "','" + hashPass.toStdString() + "','user'"};				
+				//std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toStdString() + "','" + hashPass.toStdString() + "','user'"};				
+				//std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + hashPass.toUtf8().toStdString() + "','user'"};
+				std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + "passpasspasspasspasspasspasspass" + "','user'"};
+
+				qDebug() << "\n\n\n----------------\nSalt: " << userSalt << "\n";
+				qDebug() << "\n----------------\nSalt: " << userSalt.toUtf8() << "\n";
+				qDebug() << "\n----------------\nSalt: " << userSalt.toUtf8().toStdString() << "\n";
+				qDebug() << "hashPass: " << hashPass << "\n-------------------------------";
+				qDebug() << "hashPass (UTF-8): " << hashPass.toUtf8() << "\n-------------------------------";
+				qDebug() << "hashPass (UTF-8 toStr): " << hashPass.toUtf8().toStdString() << "\n-------------------------------";
+
 
 				std::string tableName{"Users"};
 				if (isTableCreated(db, tableName) == 1) 
 				{
 					if (insertRecord(db, tableName, values))
 					{
+						// Adding the new user to 'users' vector
+						users.push_back(newUser);
+
 						userInfoBox->setIcon(QMessageBox::Information);
 						userInfoBox->setText("User Created!");
 					}
