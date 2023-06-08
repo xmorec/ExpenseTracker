@@ -4,15 +4,18 @@
 /////////////// INITIALIZING DATABASE FUNCTIONS
 //////////////////////////////////////////////////////////////////////
 
+//Check if Database file exists or not in its Path
 bool isDBExisting()
 {
+	//returns true if database file exists, false otherwise
 	struct stat buffer;
 	return (stat(DB::dbFilePath.c_str(), &buffer) == 0);
 }
 
+// Opens the database. Returns true if it is properly open or false otherwise
 bool openSQLiteDB(sqlite3*& db)
 {
-	if (sqlite3_open(DB::dbFilePath.c_str(), &db) != SQLITE_OK)
+	if (sqlite3_open(DB::dbFilePath.c_str(), &db) != SQLITE_OK) // When database could not be open
 	{
 		sqlite3_close(db);
 		return false;
@@ -21,14 +24,18 @@ bool openSQLiteDB(sqlite3*& db)
 	return true;
 }
 
+// Closes the database
 void closeSQLiteDB(sqlite3* db)
 {
 	sqlite3_close(db);
 }
 
+// Function to debug Database
 int testMyDB()
 {
 	sqlite3* db{ nullptr };
+
+	//First it is checked if Database file exists
 
 	if (isDBExisting())
 	{
@@ -40,7 +47,7 @@ int testMyDB()
 		return -2;
 	}
 
-	/* Open database */
+	/* Open database and check whether it could be successfuly open */
 	if (openSQLiteDB(db))
 	{
 		qDebug() << "\n\n\n-----------\nDATABASE SUCCESSFULLY OPENED\n-----------\n\n\n";
@@ -55,11 +62,11 @@ int testMyDB()
 	return 1;
 }
 
-
 //////////////////////////////////////////////////////////////////////
 /////////////// SUPPORTING DATABASE FUNCTIONS
 //////////////////////////////////////////////////////////////////////
 
+// Checks if a single Table of database is created or not
 int isTableCreated(sqlite3* db, const std::string& tableName)
 {
 	// Setting query to check whether a table exists or not
@@ -91,21 +98,22 @@ int isTableCreated(sqlite3* db, const std::string& tableName)
 	return isCreated;
 }
 
+// Gets the record number from a table depending on the input clause
 int getRecordNumber(sqlite3* db, const std::string& tableName, const std::string& clause)
 {
+	// Setting the SQL Query. 'clause' could be "where column_name = 'value'"
 	std::string query{ "SELECT COUNT(*) FROM " + tableName + " " + clause + ";"};
-
-	qDebug() << "\nQuery getRecordNumber: " << query << "\n";
-
 	sqlite3_stmt* stmt;
 		
 	int RecordNum{ -2 };
 
+	// Constructing the query
 	int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
-	if (rc == SQLITE_OK)
+
+	if (rc == SQLITE_OK) // Successful query construction
 	{
-		sqlite3_step(stmt);
-		RecordNum = sqlite3_column_int(stmt, 0);
+		sqlite3_step(stmt); //Execution of the SQL query
+		RecordNum = sqlite3_column_int(stmt, 0); // Getting the Record Number given by the SQL Query
 	}
 	else
 	{
@@ -118,24 +126,26 @@ int getRecordNumber(sqlite3* db, const std::string& tableName, const std::string
 	return RecordNum;
 }
 
-
 //////////////////////////////////////////////////////////////////////
 /////////////// SQLITE QUERIES
 //////////////////////////////////////////////////////////////////////
 
+// Inserting Record to a table of database. Returns 'true' for a successful inserting, 'false' otherwise
 bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& values)
 {
-	/* Create SQL statement */
+	// Create SQL statement of "INSERT INTO" filling a table with 'values'
 	sqlite3_stmt* stmt{};
 	std::string query{ "INSERT INTO " + tableName + " VALUES(" + values + ");" };
 
+	// Constructing the SQL statement
 	int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
-	if (rc != SQLITE_OK)
+
+	if (rc != SQLITE_OK) // The construction of the statement was not successful
 	{
 		sqlite3_finalize(stmt);
-		qDebug() << "\n****************\nrc = " << rc;
+		qDebug() << "\n****************\nrc = " << rc; //Checking the error code
 		const char* errorMessage = sqlite3_errmsg(db);
-		qDebug() << "\n\n\nError message: " << errorMessage << "\n\n****************\n\n\n";
+		qDebug() << "\n\n\nError message: " << errorMessage << "\n\n****************\n\n\n"; // Checking the error message given by the error code
 
 		return false;
 	}
@@ -151,52 +161,63 @@ bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& 
 	return true;
 }
 
+// Gets the record from a table according the input columns and a clause. It returns the selected records.
 std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& clause)
 {
-	//create prepared statement
+
+	// Setting the SQL Query. 'clause' could be "where column_name = 'value'"
 	sqlite3_stmt* stmt{};
 	std::string query{ "SELECT " + columns + " FROM " + tableName + " " + clause + ";" };
-	//std::string query{ "SELECT user_type FROM  Users " + clause + ";" };
 
+	// The number of records for that SQL query is obtained
 	int recordNum{ getRecordNumber(db, tableName, clause) };
+
+	// The vector of Records is created
 	std::vector<QStringList> records{};
 	records.reserve(recordNum);	
 
+	// Constructing the query
 	int rc{ sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0) };
-	if (rc != SQLITE_OK)
+
+	if (rc != SQLITE_OK) // Not Successful query construction
 	{
 		sqlite3_finalize(stmt);
-		return records;
+		return records; // Returns an empty vector for Records
 	}
 
 	//bind values to parameters
 	//sqlite3_bind_text(stmt, 1, "*", -1, SQLITE_STATIC);
 	//sqlite3_bind_text(stmt, 2, "User 1", -1, SQLITE_STATIC);
 
+	// Getting the number of columns related to the SQL Query
 	int numColumns = sqlite3_column_count(stmt);
 
+	// Initializing the QStringList elements of the vector with a size of 'numColumns'
 	for (int i = 0; i < recordNum; ++i)
 	{
 		records.push_back(QStringList(numColumns));
-	}
-	
-	QString selectedDBData{""};
+	}	
 
+	// QString used to store each value of each column, record of the table
+	QString selectedDBData{""};	
 
-	// run the SQL
+	// Running a loop to fill the vector 'records'
 	int j{ 0 };
-	while (sqlite3_step(stmt) == SQLITE_ROW)
+	while (sqlite3_step(stmt) == SQLITE_ROW) //This loops until the execution of the statement does not give a "row" state
 	{	
-		for (int i = 0; i < numColumns; ++i)
+		for (int i = 0; i < numColumns; ++i) // Looping each column
 		{
-			if (!sqlite3_column_text(stmt, i))
+			// When there is 'null' value in the [record, column] position
+			if (!sqlite3_column_text(stmt, i)) 
 			{
 				selectedDBData = "NULL";
 			}
-			else
+			else // When there is a 'non-null' value in the [record, column] position
 			{
 				selectedDBData = reinterpret_cast<char const*>(sqlite3_column_text(stmt, i));
 			}
+
+			// Filling the records vector
 			records[j][i] = selectedDBData;		
 		}
 		++j;
@@ -207,44 +228,47 @@ std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, c
 	return records;
 }
 
+// Updates Records from a Table of Database
 int updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition)
 {
-	//create prepared statement
+	//Setting the SQL Query where 'condition' could be "column_name = 'value'"
 	sqlite3_stmt* stmt{};
-	//UPDATE table SET column1 = value1, column2 = value2...., columnN = valueN, WHERE condition.
 	std::string query{ "UPDATE " + tableName + " SET " + columns + " = '" + values + "' WHERE " + condition + ";" };
 
+	//Constructing the SQL query statement
 	int rc{ sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0) };
 
-	if (rc != SQLITE_OK)
+	// SQL statement was not successfully constructed
+	if (rc != SQLITE_OK) 
 	{
-		std::cout << "Failure in Modifying\n";
 		sqlite3_finalize(stmt);
 		return -1;
 	}
-
-	sqlite3_step(stmt);
+		
+	sqlite3_step(stmt); // Executing the SQL Query
 	sqlite3_finalize(stmt);
 
 	return 1;
 
 }
 
+// Deletes Records from a Table of Database
 int deletingRecords(sqlite3* db, const std::string& tableName, const std::string& clause)
 {
-
+	// Setting the SQL Query
 	sqlite3_stmt* stmt{};
 	std::string query{ "DELETE FROM " + tableName + " " + clause + ";" };
 
+	// Constructs the SQL Query Statement
 	int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
-	if (rc != SQLITE_OK)
+
+	if (rc != SQLITE_OK) // Construction of the statement was not successful
 	{
-		std::cout << "Failure in Deleting\n";
 		sqlite3_finalize(stmt);
 		return -1;
 	}
 
-	sqlite3_step(stmt);
+	sqlite3_step(stmt); // Executing the SQL Query to the Database
 	sqlite3_finalize(stmt);
 
 	return 1;

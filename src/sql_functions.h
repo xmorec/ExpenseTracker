@@ -20,12 +20,16 @@
 /////////////// INITIALIZING DATABASE FUNCTIONS
 //////////////////////////////////////////////////////////////////////
 
+//Check if Database file exists or not in its Path
 bool isDBExisting();
 
+// Opens the database. Returns true if it is properly open or false otherwise
 bool openSQLiteDB(sqlite3*& db);
 
+// Closes the database
 void closeSQLiteDB(sqlite3* db);
 
+// Function to debug Database
 int testMyDB();
 
 
@@ -33,8 +37,10 @@ int testMyDB();
 /////////////// SUPPORTING DATABASE FUNCTIONS
 //////////////////////////////////////////////////////////////////////
 
+// Checks if a single Table of database is created or not
 int isTableCreated(sqlite3* db, const std::string& tableName);
 
+// Gets the record number from a table depending on the input clause
 int getRecordNumber(sqlite3* db, const std::string& tableName, const std::string& clause = "");
 
 
@@ -42,12 +48,16 @@ int getRecordNumber(sqlite3* db, const std::string& tableName, const std::string
 /////////////// SQLITE QUERIES
 //////////////////////////////////////////////////////////////////////
 
+// Inserting Record to a table of database. Returns 'true' for a successful inserting, 'false' otherwise
 bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& values);
 
+// Gets the record from a table according the input columns and a clause. It returns the selected records.
 std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, const std::string& columns = "*", const std::string& clause = "");
 
+// Updates Records from a Table of Database
 int updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition);
 
+// Deletes Records from a Table of Database
 int deletingRecords(sqlite3* db, const std::string& tableName, const std::string& clause = "");
 
 
