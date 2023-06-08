@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <QDebug>
+#include <QString>
 #include "constants.h"
 
 
@@ -34,7 +35,7 @@ int testMyDB();
 
 int isTableCreated(sqlite3* db, const std::string& tableName);
 
-int getRecordNumber(sqlite3* db, const std::string& tableName);
+int getRecordNumber(sqlite3* db, const std::string& tableName, const std::string& clause = "");
 
 
 //////////////////////////////////////////////////////////////////////
@@ -43,7 +44,7 @@ int getRecordNumber(sqlite3* db, const std::string& tableName);
 
 bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& values);
 
-int getRecords(sqlite3* db, const std::string& tableName, const std::string& columns = "*", const std::string& clause = "");
+std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, const std::string& columns = "*", const std::string& clause = "");
 
 int updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition);
 

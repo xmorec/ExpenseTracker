@@ -64,6 +64,9 @@ public:
 	// Executes the Creation User Process and Checking
 	void createUser();
 
+	// Insert the created user to DB
+	bool insertUserToDB(sqlite3* db, const QString& newUsername);
+
 	// Generating the hashPassword from the plain password and the generated Salt
 	QString hashPassword(const QString& plainPassword, const QString& userSalt);
 

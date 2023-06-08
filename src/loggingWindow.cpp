@@ -70,19 +70,70 @@ loggingWindow::loggingWindow() : QDialog()
 //Load Users from DB and store them in 'users' vector
 void loggingWindow::loadUsersFromDB()
 {
-	QString userN1{ "Xavi" };
-	QString userN2{ "lara" };
-	QString userN3{ "ricard12" };
 
-	User* user1{ new User(userN1) };
-	User* user2{ new User(userN2) };
-	User* user3{ new User(userN3) };
+	// Checking if Database file exists
+	if (isDBExisting())
+	{
+		sqlite3* db{};
 
-	users.reserve(20);
+		//Opening database
+		if (openSQLiteDB(db))
+		{
+			// Check if tableUsers is created
+			if (isTableCreated(db, DB::tableUsers) == 1)
+			{
+				//records gets the output of the SELECT query given by 'getRecords()'
+				std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, salt, hash_password") };
 
-	users.push_back(user1);
-	users.push_back(user2);
-	users.push_back(user3);
+				//Get the number of users with admin privileges
+				int adminUsersNum = getRecordNumber(db, DB::tableUsers, "WHERE user_type = '" + DB::UserType::admin + "'");
+
+				// If there is no admin in database, one is created
+				if (adminUsersNum == 0)
+				{
+					// Tries to insert the new admin to DB and also adds it to the 'users' vector
+					if (insertUserToDB(db, "admin"))
+					{
+						//Show infoBox
+						userInfoBox->setWindowTitle("Admin Creation");
+						userInfoBox->setIcon(QMessageBox::Information);
+						userInfoBox->setText("Admin User is created\nUser: \"admin\"\nPass: \"admin\"");
+					}
+					else
+					{
+						userInfoBox->setIcon(QMessageBox::Warning);
+						userInfoBox->setText("An admin should be created but it was not possible.\nRestart the application");
+					}
+
+					userInfoBox->exec();
+				}
+
+				// Load the database users to the Users vector 'users'
+				if(!records.empty())
+				{				
+					for (const QStringList& record : records)
+					{
+						User* userDB{ new User(record[0])};
+						userDB->setSalt(record[1]);
+						userDB->setHashPassword(record[2]);						
+						userDB->setSaltDB(record[1].toUtf8());
+						userDB->setHashPasswordDB(record[2].toUtf8());
+						users.push_back(userDB);
+					}
+				}
+			}
+			else // If Database tableUsers is not found
+			{
+				userInfoBox->setWindowTitle("Warning");
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->setText("Users could not be loaded (no database table found)!");
+
+				//Show infoBox
+				userInfoBox->exec();
+			}
+			closeSQLiteDB(db);
+		}
+	}
 }
 
 // Execute the Logging In process and Checking
@@ -138,50 +189,20 @@ void loggingWindow::createUser()
 	//Checks if input user name has a correct format and, if so, hash password and salt is generated for this user
 	if (isCorrectNameFormat(newUsername))
 	{
-		User* newUser{ new User(newUsername) };
-
-		// Getting the input plain password from Password Field
-		QString plainPassword{ passEdit->text() };
-
-		// Generating Salt
-		QString userSalt{ generateSalt(8) };
-
-		// Generating Hash Password
-		QString hashPass{ hashPassword(plainPassword, userSalt) };
-
-		// Sotre Hash Password and Salt to the new User
-		newUser->setHashPassword(hashPass);
-		newUser->setSalt(userSalt);
-		newUser->setHashPasswordDB(hashPass.toUtf8());
-		newUser->setSaltDB(userSalt.toUtf8());
-
-		// Adding new user to Database
+		// Adding new user to Database: Checking its availability
 		if (isDBExisting())
 		{
 			sqlite3* db{};
+
+			// Opening Database
 			if (openSQLiteDB(db))
 			{
-				std::string newUsernameStr{ newUsername.toStdString()};
-				//std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toStdString() + "','" + hashPass.toStdString() + "','user'"};				
-				//std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + hashPass.toUtf8().toStdString() + "','user'"};
-				std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + "passpasspasspasspasspasspasspass" + "','user'"};
-
-				qDebug() << "\n\n\n----------------\nSalt: " << userSalt << "\n";
-				qDebug() << "\n----------------\nSalt: " << userSalt.toUtf8() << "\n";
-				qDebug() << "\n----------------\nSalt: " << userSalt.toUtf8().toStdString() << "\n";
-				qDebug() << "hashPass: " << hashPass << "\n-------------------------------";
-				qDebug() << "hashPass (UTF-8): " << hashPass.toUtf8() << "\n-------------------------------";
-				qDebug() << "hashPass (UTF-8 toStr): " << hashPass.toUtf8().toStdString() << "\n-------------------------------";
-
-
-				std::string tableName{"Users"};
-				if (isTableCreated(db, tableName) == 1) 
-				{
-					if (insertRecord(db, tableName, values))
+				// Checking if Table is created
+				if (isTableCreated(db, DB::tableUsers) == 1)
+				{	
+					// Tries to insert the new User to DB and also adds it to the 'users' vector
+					if (insertUserToDB(db, newUsername))
 					{
-						// Adding the new user to 'users' vector
-						users.push_back(newUser);
-
 						userInfoBox->setIcon(QMessageBox::Information);
 						userInfoBox->setText("User Created!");
 					}
@@ -189,21 +210,106 @@ void loggingWindow::createUser()
 					{
 						userInfoBox->setIcon(QMessageBox::Warning);
 						userInfoBox->setText("User could not be created!");
-					}					
+					}
 				}
-				else
+				else // When Users Table is not found
 				{
 					userInfoBox->setIcon(QMessageBox::Warning);
-					userInfoBox->setText("User could not be created (no table found)!");
-				}
-				userInfoBox->exec();
+					userInfoBox->setText("User could not be created (no database table found)!");
+				}				
 				closeSQLiteDB(db);
 			}			
-		}		
+		}
+		else
+		{
+			userInfoBox->setIcon(QMessageBox::Warning);
+			userInfoBox->setText("No Database found!");
+		}
+
+		//Show infoBox
+		userInfoBox->exec();
 
 		// The Logging View is loaded
 		loadLoggingView();
 	}
+}
+
+// This function tries to insert the new User to DB and also adds it to the 'users' vector. Returns 'true' for a successful insertion and 'false' otherwise
+bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
+{
+	//Creating new User
+	User* newUser{ new User(newUsername) };
+
+	// Getting the input plain password from Password Field
+	QString plainPassword{ newUsername == "admin" ? "admin" : passEdit->text()};
+
+		// Generating Salt
+	QString userSalt{ generateSalt(8) };
+
+	// Generating Hash Password
+	QString hashPass{ hashPassword(plainPassword, userSalt) };
+
+	std::string userType{ newUsername == "admin" ? DB::UserType::admin : DB::UserType::user };
+
+	// Setting the parameters to be sent to the SQL Query
+	std::string newUsernameStr{ newUsername.toStdString() };
+	std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + hashPass.toUtf8().toStdString() + "','" + userType + "'" };
+
+	int it{ 0 };
+	int maxTries{ 7 };
+
+	// If hash password or salt are generating troubles to Database, they are generated again
+	// in order to trying another User Insertion to Database (max tries: 'maxTries')
+	// insertRecord() is the function used to send the SQL Query to database
+	while (it < maxTries && (insertRecord(db, DB::tableUsers, values) != true))
+	{
+		// Generating Salt
+		userSalt = generateSalt(8);
+
+		// Generating Hash Password
+		hashPass = hashPassword(plainPassword, userSalt);
+
+		// Updating the string values to be sent to the SQL query
+		values = "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + hashPass.toUtf8().toStdString() + "','" + userType + "'";
+
+		++it;
+	}
+
+	// Inserting User to the DB was successfuly done
+	if (it < maxTries)
+	{
+		// Adding the new user to 'users' vector
+		users.push_back(newUser);
+
+		// Sotre Hash Password and Salt to the new User
+		newUser->setHashPassword(hashPass);
+		newUser->setSalt(userSalt);
+		newUser->setHashPasswordDB(hashPass.toUtf8());
+		newUser->setSaltDB(userSalt.toUtf8());
+
+		return true;
+	}
+	else //The user could not be inserted to the database
+	{
+		return false;
+	}
+
+}
+
+// Salt generating with a size of 'saltSize' bytes
+QString loggingWindow::generateSalt(int saltSize)
+{
+	// Initializing Salt Byte Array of size 'saltSize'
+	QByteArray saltByteArray{};
+	saltByteArray.resize(saltSize);
+
+	// Filling each byte of Salt with a random unsigned character (int value rank 0-255 (1 byte))
+	for (int i = 0; i < saltSize; ++i)
+	{
+		saltByteArray[i] = static_cast<unsigned char>(QRandomGenerator::system()->generate());
+	}
+
+	return QString::fromLatin1(saltByteArray);
 }
 
 // Generating the hashPassword from the plain password and the generated Salt
@@ -225,22 +331,6 @@ QString loggingWindow::hashPassword(const QString& plainPassword, const QString&
 	return hashPassword;
 }
 
-// Salt generating with a size of 'saltSize' bytes
-QString loggingWindow::generateSalt(int saltSize)
-{
-	// Initializing Salt Byte Array of size 'saltSize'
-	QByteArray saltByteArray{};
-	saltByteArray.resize(saltSize);
-
-	// Filling each byte of Salt with a random unsigned character (int value rank 0-255 (1 byte))
-	for (int i = 0; i < saltSize; ++i)
-	{
-		saltByteArray[i] = static_cast<unsigned char>(QRandomGenerator::system()->generate());
-	}
-
-	return QString::fromLatin1(saltByteArray);
-}
-
 // Checks if the input user name (newUsername) has a correct text format
 bool loggingWindow::isCorrectNameFormat(const QString& newUsername)
 {
@@ -248,6 +338,15 @@ bool loggingWindow::isCorrectNameFormat(const QString& newUsername)
 	if (newUsername.isEmpty())
 	{
 		userInfoBox->setText("Username cannot be empty.");
+		userInfoBox->setIcon(QMessageBox::Warning);
+		userInfoBox->exec();
+		return false;
+	}
+
+	// Checks if user tries to set their name to "admin"
+	if (newUsername.toLower() == "admin")
+	{
+		userInfoBox->setText("Username cannot be \"admin\"");
 		userInfoBox->setIcon(QMessageBox::Warning);
 		userInfoBox->exec();
 		return false;

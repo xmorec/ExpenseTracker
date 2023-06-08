@@ -3,8 +3,18 @@
 
 #include <QString>
 
+namespace DB
+{
+	inline const std::string dbFilePath{ "resources/database/ExpenseTrackerDB.db" };
+	inline const std::string tableUsers{ "Users" };
 
-inline const std::string dbFilePath{ "resources/database/ExpenseTrackerDB.db" };
+	namespace UserType
+	{
+		inline const std::string user{ "user" };
+		inline const std::string admin{ "admin" };
+	}
+
+}
 
 namespace icons
 {

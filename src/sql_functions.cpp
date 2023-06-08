@@ -7,12 +7,12 @@
 bool isDBExisting()
 {
 	struct stat buffer;
-	return (stat(dbFilePath.c_str(), &buffer) == 0);
+	return (stat(DB::dbFilePath.c_str(), &buffer) == 0);
 }
 
 bool openSQLiteDB(sqlite3*& db)
 {
-	if (sqlite3_open(dbFilePath.c_str(), &db) != SQLITE_OK)
+	if (sqlite3_open(DB::dbFilePath.c_str(), &db) != SQLITE_OK)
 	{
 		sqlite3_close(db);
 		return false;
@@ -91,14 +91,17 @@ int isTableCreated(sqlite3* db, const std::string& tableName)
 	return isCreated;
 }
 
-int getRecordNumber(sqlite3* db, const std::string& tableName)
+int getRecordNumber(sqlite3* db, const std::string& tableName, const std::string& clause)
 {
-	std::string query{ "SELECT COUNT(*) FROM " + tableName + ";" };
-	sqlite3_stmt* stmt;
-	int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
+	std::string query{ "SELECT COUNT(*) FROM " + tableName + " " + clause + ";"};
 
+	qDebug() << "\nQuery getRecordNumber: " << query << "\n";
+
+	sqlite3_stmt* stmt;
+		
 	int RecordNum{ -2 };
 
+	int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
 	if (rc == SQLITE_OK)
 	{
 		sqlite3_step(stmt);
@@ -130,9 +133,9 @@ bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& 
 	if (rc != SQLITE_OK)
 	{
 		sqlite3_finalize(stmt);
-		qDebug() << "\n---------- rc = " << rc;
+		qDebug() << "\n****************\nrc = " << rc;
 		const char* errorMessage = sqlite3_errmsg(db);
-		qDebug() << "\n\n****************\n\n\nError message: " << errorMessage << "\n\n\n\n\n";
+		qDebug() << "\n\n\nError message: " << errorMessage << "\n\n****************\n\n\n";
 
 		return false;
 	}
@@ -142,23 +145,28 @@ bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& 
 	//sqlite3_bind_text(stmt, 2, std::to_string(numUsers).c_str(), -1, NULL);
 
 	sqlite3_step(stmt);
+	sqlite3_reset(stmt);
 	sqlite3_finalize(stmt);
 
 	return true;
 }
 
-int getRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& clause)
+std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& clause)
 {
 	//create prepared statement
 	sqlite3_stmt* stmt{};
 	std::string query{ "SELECT " + columns + " FROM " + tableName + " " + clause + ";" };
-	int rc{ sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0) };
+	//std::string query{ "SELECT user_type FROM  Users " + clause + ";" };
 
+	int recordNum{ getRecordNumber(db, tableName, clause) };
+	std::vector<QStringList> records{};
+	records.reserve(recordNum);	
+
+	int rc{ sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0) };
 	if (rc != SQLITE_OK)
 	{
-		std::cout << "Failure in Selecting\n";
 		sqlite3_finalize(stmt);
-		return -1;
+		return records;
 	}
 
 	//bind values to parameters
@@ -167,28 +175,36 @@ int getRecords(sqlite3* db, const std::string& tableName, const std::string& col
 
 	int numColumns = sqlite3_column_count(stmt);
 
-	// run the SQL
-	while (sqlite3_step(stmt) == SQLITE_ROW)
+	for (int i = 0; i < recordNum; ++i)
 	{
+		records.push_back(QStringList(numColumns));
+	}
+	
+	QString selectedDBData{""};
+
+
+	// run the SQL
+	int j{ 0 };
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+	{	
 		for (int i = 0; i < numColumns; ++i)
 		{
-			//std::cout << reinterpret_cast<const char*>(sqlite3_column_text(stmt, i)) << ' ';
 			if (!sqlite3_column_text(stmt, i))
 			{
-				std::cout << "NULL ";
+				selectedDBData = "NULL";
 			}
 			else
 			{
-				std::cout << sqlite3_column_text(stmt, i) << ' ';
+				selectedDBData = reinterpret_cast<char const*>(sqlite3_column_text(stmt, i));
 			}
+			records[j][i] = selectedDBData;		
 		}
-		std::cout << '\n';
+		++j;
 	}
 
 	sqlite3_finalize(stmt);
 
-	return 1;
-
+	return records;
 }
 
 int updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition)
