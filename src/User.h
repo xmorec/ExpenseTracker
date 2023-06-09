@@ -16,6 +16,7 @@ private:
 	QString userName{};
 	QString salt{};
 	QString hashPassword{};
+	QString userType{};
 
 	QByteArray saltDB{};
 	QByteArray hashPasswordDB{};
@@ -28,6 +29,16 @@ public:
 	const QString& getUserName()
 	{
 		return userName;
+	}
+
+	const QString& getUserType()
+	{
+		return userType;
+	}
+
+	void setUserType(const QString& userType)
+	{
+		this->userType = userType;
 	}
 
 	const QString& getHashPassword()

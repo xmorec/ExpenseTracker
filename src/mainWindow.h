@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "tableEdit.h"
 #include "savingOverview.h"
+#include "User.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -26,7 +27,7 @@ public:
 
     // Constructor of mainWindow that take as input parameter QRect object that will be used to
     // resize the mainWindow accordingly
-    mainWindow(const QRect& screen);
+    mainWindow(User* currentUser, const QRect& screen);
 
 };
 

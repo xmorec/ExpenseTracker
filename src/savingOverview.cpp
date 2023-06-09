@@ -1,11 +1,14 @@
 ﻿#include "savingOverview.h"
 
 // Constructor of the View with two tables "Expenses Table" and "Savings Table"
-savingOverview::savingOverview() : QHBoxLayout()
+savingOverview::savingOverview(User* loggedUser) : QHBoxLayout()
 {
     ////////////////////////////////////////////////////////////////////////////////////////
     ////////// ---------- Overview Expenses Table  ---------////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////
+
+    // Setting the current User as the logged User
+    currentUser = loggedUser;
 
     //The Expenses Table is initializated, filled with the user values and Remove Buttons and also made updateable
     fillExpensesTable();

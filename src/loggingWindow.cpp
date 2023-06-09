@@ -159,6 +159,16 @@ void loggingWindow::loggingIn()
 		// Checks if the input password is the correct one for the selected user
 		if (hashPassword(inputPass, userSalt) == QString::fromUtf8((*userIt)->getHashPasswordDB()))
 		{
+			// In case the password is correct, the Logged User is set accordingly
+			loggedUser = (*userIt);
+
+			// Free 'User' memory from users vector pointers
+			for (User* user : users)
+			{
+				if (user != *userIt)
+					delete user;
+			}
+
 			// In case the password is correct, the logging status is set to "true" and QDialog is closed
 			loggingStatus = true;
 			this->close();
@@ -243,12 +253,13 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 	// Getting the input plain password from Password Field
 	QString plainPassword{ newUsername == "admin" ? "admin" : passEdit->text()};
 
-		// Generating Salt
+	// Generating Salt
 	QString userSalt{ generateSalt(8) };
 
 	// Generating Hash Password
 	QString hashPass{ hashPassword(plainPassword, userSalt) };
 
+	// Setting the User Type
 	std::string userType{ newUsername == "admin" ? DB::UserType::admin : DB::UserType::user };
 
 	// Setting the parameters to be sent to the SQL Query
@@ -281,11 +292,12 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		// Adding the new user to 'users' vector
 		users.push_back(newUser);
 
-		// Sotre Hash Password and Salt to the new User
+		// Sotre Salt, Hash Password and User Type to the new User
 		newUser->setHashPassword(hashPass);
 		newUser->setSalt(userSalt);
 		newUser->setHashPasswordDB(hashPass.toUtf8());
 		newUser->setSaltDB(userSalt.toUtf8());
+		newUser->setUserType(QString::fromStdString(userType));
 
 		return true;
 	}
@@ -427,4 +439,10 @@ void loggingWindow::loadLoggingView()
 bool loggingWindow::getLoggingStatus()
 {
 	return loggingStatus;
+}
+
+// Returns the logged User
+User* loggingWindow::getCurrentUser()
+{
+	return loggedUser;
 }

@@ -2,7 +2,7 @@
 
 
 
-mainWindow::mainWindow(const QRect& screen)
+mainWindow::mainWindow(User* currentUser, const QRect& screen)
 {
     setWindowIcon(QIcon(icons::expTrackerIcon));
     setWindowTitle("Expense Tracker");
@@ -26,7 +26,7 @@ mainWindow::mainWindow(const QRect& screen)
     ////////////////////////  EXPENSE/SAVING OVERVIEW  ///////////////////////////////////////
 
     
-    savingOverview* savingTablesLayout = new savingOverview();
+    savingOverview* savingTablesLayout = new savingOverview(currentUser);
     mainVLayout->addLayout(savingTablesLayout);
 
 

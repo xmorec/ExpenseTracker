@@ -50,6 +50,9 @@ private:
 	// Users vector that contains all users in the program-system
 	std::vector<User*> users{};	
 
+	// Logged User
+	User* loggedUser{nullptr};
+
 public:
 
 	// Generates the main QDialog for the Logging Session
@@ -85,6 +88,9 @@ public:
 	// Returns the logging status flag
 	bool getLoggingStatus();
 	
+	// Returns the logged User
+	User* getCurrentUser();
+
 };
 
 #endif

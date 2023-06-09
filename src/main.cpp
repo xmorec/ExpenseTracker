@@ -16,11 +16,14 @@ int main(int argc, char* argv[])
     // If Logging In was successful (all credentials are the correct ones for the logged user)
     if (loggWin->getLoggingStatus() == true)
     {
+        // Getting the logged User
+        User* currentUser{loggWin->getCurrentUser()};
+
         // deleting loggWin as it is no longer needed
         delete loggWin;
 
         // Executing the main window program (screen geometry parameters are set as input parameters to resize the main window)
-        mainWindow* window = new mainWindow(app.primaryScreen()->availableGeometry());
+        mainWindow* window = new mainWindow(currentUser, app.primaryScreen()->availableGeometry());
         
         return app.exec();
     }

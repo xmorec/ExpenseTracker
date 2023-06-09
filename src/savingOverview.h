@@ -7,6 +7,8 @@
 #include <QPushButton>
 #include <fstream>
 #include "constants.h"
+#include "sql_functions.h"
+#include "User.h"
 #include "tableEdit.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -20,6 +22,8 @@ class savingOverview : public QHBoxLayout
 
 private:
 
+    User* currentUser{nullptr};
+    
     inline static const QString moneyUnit{ "€" };
     bool wrongCellFlag{ false };
 
@@ -73,7 +77,7 @@ private:
 public:
 
     // Constructor of the View with two tables "Expenses Table" and "Savings Table"
-    savingOverview(); //: QHBoxLayout();
+    savingOverview(User* loggedUser); //: QHBoxLayout();
 
     // Function that generates the Expenses Table
     void fillExpensesTable();
