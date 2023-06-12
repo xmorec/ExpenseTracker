@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <QDebug>
 #include <QString>
+#include <QMessageBox>
 #include "constants.h"
 
 
@@ -25,6 +26,9 @@ bool isDBExisting();
 
 // Opens the database. Returns true if it is properly open or false otherwise
 bool openSQLiteDB(sqlite3*& db);
+
+// Checks if Database exists, opens the database and checks if input tables exist. Generates message errors in case something fails
+int checkAndOpenSQLiteDB(sqlite3*& db, QMessageBox* userInfoBox, const std::vector<std::string>& tables);
 
 // Closes the database
 void closeSQLiteDB(sqlite3* db);

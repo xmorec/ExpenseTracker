@@ -172,7 +172,6 @@ void savingOverview::generateExpensesFromCSV()
 
     if (!expensesFileStream)
     {
-        qDebug() << "The file " << expensesFile << " could not be opened\n";
         return;
     }
 
@@ -185,7 +184,6 @@ void savingOverview::generateExpensesFromCSV()
     while (std::getline(expensesFileStream, line))
     {
         QString qline = QString::fromStdString(line);
-        qDebug() << qline.split(";") << "\n";
         expensesCSV.push_back(qline.split(";"));
     }
 
@@ -228,17 +226,38 @@ void savingOverview::generateExpensesFromCSV()
         }
         // the sorted row of CSV (expense from CSV) is inserted into 'expenses' vector. 'expenses' vector will be shown in the "Expenses Table".
         expenses.push_back(importExpense);
-        qDebug() << expenses[row - 1] << "\n";
     }
 }
 
 // Expenses vector generation from Database SQLite
 void savingOverview::generateExpensesFromDB()
 {
-    generateExpensesFromCSV();
+    userInfoBox->setWindowTitle("Loading User Expenses");
+    userInfoBox->setWindowIcon(QIcon(icons::expTrackerIcon));
 
+    sqlite3* db{};
 
+    if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableExpenses, DB::tableIncome }) == DB::OPEN_SUCCESS)
+    {
+        std::string clause{ "WHERE username = '" + currentUser->getUserName().toStdString() + "'"};
+        std::string columns{"expense, amount, frequency"};
+        std::vector<QStringList> expensesDB{ getRecords(db, DB::tableExpenses, columns, clause) };
+        expenses.reserve(25);
 
+        // Load the database expenses to the Expense users
+        if (!expensesDB.empty())
+        {
+            for (QStringList& expense : expensesDB)
+            {
+                // Adding the totalAmount = Expense Amount * Expense Frequency
+                QString totalAmount{ QString::number(expense[1].toDouble() * expense[2].toDouble())};
+                expense.append(totalAmount);
+                expenses.push_back(expense);
+            }
+        }
+
+        closeSQLiteDB(db);
+    }
 }
 
 // Income generation from external source
@@ -252,7 +271,6 @@ void savingOverview::generateSavingsFromCSV()
 
     if (!savingsFileStream)
     {
-        qDebug() << "The file " << savingsFile << " could not be opened\n";
         return;
     }
 
@@ -265,7 +283,6 @@ void savingOverview::generateSavingsFromCSV()
     while (std::getline(savingsFileStream, line))
     {
         QString qline = QString::fromStdString(line);
-        qDebug() << qline.split(";") << "\n";
         savingsCSV.push_back(qline.split(";"));
     }
 
@@ -593,15 +610,14 @@ void savingOverview::saveDataToCSV()
     //This function sets the expenses vector with the content of Database or a CSV file
 
     // This msgBox will inform the saving status
-    QMessageBox* msgBox = new QMessageBox();
-    msgBox->setWindowTitle("Saving Expenses");
-    msgBox->setWindowIcon(QIcon(icons::saveIcon));
+    userInfoBox->setWindowTitle("Saving Expenses");
+    userInfoBox->setWindowIcon(QIcon(icons::saveIcon));
 
     if (wrongCellFlag)
     {
-        msgBox->setText("You cannot save your expense management until they have a proper format.");
-        msgBox->setIcon(QMessageBox::Warning);
-        msgBox->exec();
+        userInfoBox->setText("You cannot save your expense management until they have a proper format.");
+        userInfoBox->setIcon(QMessageBox::Warning);
+        userInfoBox->exec();
         return;
     }
 
@@ -611,10 +627,9 @@ void savingOverview::saveDataToCSV()
 
     if (!expensesFileStream)
     {
-        msgBox->setText("ERROR: Your expenses management cold not be saved!");
-        msgBox->setIcon(QMessageBox::Warning);
-        msgBox->exec();
-        qDebug() << "The file " << expensesFile << " could not be opened\n";
+        userInfoBox->setText("ERROR: Your expenses management cold not be saved!");
+        userInfoBox->setIcon(QMessageBox::Warning);
+        userInfoBox->exec();
         return;
     }
 
@@ -623,10 +638,9 @@ void savingOverview::saveDataToCSV()
 
     if (!tempExpensesFileStream)
     {
-        msgBox->setText("ERROR: Your expenses management cold not be saved!");
-        msgBox->setIcon(QMessageBox::Warning);
-        msgBox->exec();
-        qDebug() << "The file " << expensesFileTemp << "could not be opened\n";
+        userInfoBox->setText("ERROR: Your expenses management cold not be saved!");
+        userInfoBox->setIcon(QMessageBox::Warning);
+        userInfoBox->exec();
         return;
     }
 
@@ -656,10 +670,9 @@ void savingOverview::saveDataToCSV()
 
     if (!savingsFileStream)
     {
-        msgBox->setText("ERROR: Your expenses management cold not be saved!");
-        msgBox->setIcon(QMessageBox::Warning);
-        msgBox->exec();
-        qDebug() << "The file " << savingsFile << " could not be opened\n";
+        userInfoBox->setText("ERROR: Your expenses management cold not be saved!");
+        userInfoBox->setIcon(QMessageBox::Warning);
+        userInfoBox->exec();
         return;
     }
 
@@ -668,10 +681,9 @@ void savingOverview::saveDataToCSV()
 
     if (!tempSavingsFileStream)
     {
-        msgBox->setText("ERROR: Your expenses management cold not be saved!");
-        msgBox->setIcon(QMessageBox::Warning);
-        msgBox->exec();
-        qDebug() << "The file " << savingsFileTemp << "could not be opened\n";
+        userInfoBox->setText("ERROR: Your expenses management cold not be saved!");
+        userInfoBox->setIcon(QMessageBox::Warning);
+        userInfoBox->exec();
         return;
     }
 
@@ -687,9 +699,9 @@ void savingOverview::saveDataToCSV()
     std::remove(savingsFile);
     std::rename(savingsFileTemp, savingsFile);
 
-    msgBox->setText("Your expenses management has been saved!");
-    msgBox->setIcon(QMessageBox::Information);
-    msgBox->exec();
+    userInfoBox->setText("Your expenses management has been saved!");
+    userInfoBox->setIcon(QMessageBox::Information);
+    userInfoBox->exec();
 
 }
 

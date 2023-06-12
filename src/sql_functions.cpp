@@ -30,6 +30,53 @@ void closeSQLiteDB(sqlite3* db)
 	sqlite3_close(db);
 }
 
+// Checks if Database exists, opens the database and checks if input tables exist. Generates message errors in case something fails
+int checkAndOpenSQLiteDB(sqlite3*& db, QMessageBox* userInfoBox, const std::vector<std::string>& tables)
+{
+	//Checking DB availability
+	if (isDBExisting())
+	{
+		// Opening Database
+		if (openSQLiteDB(db))
+		{
+			// Count the number of created tables
+			int tableCreated{ 0 };
+			for (const std::string& table : tables)
+			{
+				tableCreated += isTableCreated(db, table);
+			}
+
+			// When all input tables are created
+			if (tableCreated == tables.size())
+			{
+				return DB::OPEN_SUCCESS;
+			}
+			else //When at least one of the input tables is not created
+			{
+				userInfoBox->setText("Database Tables are not created");
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->exec();
+				closeSQLiteDB(db);
+				return DB::NO_TABLES;
+			}
+		}
+		else // When the database could not be opened
+		{
+			userInfoBox->setText("Database could not be opened");
+			userInfoBox->setIcon(QMessageBox::Warning);
+			userInfoBox->exec();
+			return DB::OPEN_NOT_SUCCESS;
+		}
+	}
+	else // When Database file is not existing
+	{
+		userInfoBox->setText("Database File is not existing in the expected folder");
+		userInfoBox->setIcon(QMessageBox::Warning);
+		userInfoBox->exec();
+		return DB::NO_DB;
+	}
+}
+
 // Function to debug Database
 int testMyDB()
 {

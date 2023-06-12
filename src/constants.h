@@ -7,6 +7,13 @@ namespace DB
 {
 	inline const std::string dbFilePath{ "resources/database/ExpenseTrackerDB.db" };
 	inline const std::string tableUsers{ "Users" };
+	inline const std::string tableExpenses{ "Expenses" };
+	inline const std::string tableIncome{ "Income" };
+
+	inline const int OPEN_SUCCESS{ 100 }; // Return value when Database and tables exists and also Database could be opened
+	inline const int OPEN_NOT_SUCCESS{ 101 }; // Return value when Tables are not existing
+	inline const int NO_TABLES { 102 }; // Return value when Tables are not existing
+	inline const int NO_DB { 103 }; // Return value when Database is not existing
 
 	namespace UserType
 	{

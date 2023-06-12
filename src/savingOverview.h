@@ -22,10 +22,14 @@ class savingOverview : public QHBoxLayout
 
 private:
 
+    // Logged User
     User* currentUser{nullptr};
     
     inline static const QString moneyUnit{ "€" };
     bool wrongCellFlag{ false };
+
+    // Informing QMessageBox
+    QMessageBox* userInfoBox = new QMessageBox();
 
     ////////// ---------- Expenses Table Parameters --------- //////////////////////////////
     // Horizontal Header Table Titles:
