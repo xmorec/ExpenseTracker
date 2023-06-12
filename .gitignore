@@ -4,6 +4,10 @@
 #excluding folder x64 created from Visual Studio (compiling folder)
 /x64/Debug
 
-#excluding files for deleting and showing Database
-/resources/database/show.txt
-/resources/database/delete.txt
+#excluding files for deleting and showing Database tables
+/resources/database/susers.txt
+/resources/database/dusers.txt
+/resources/database/sexpenses.txt
+/resources/database/dexpenses.txt
+/resources/database/sincome.txt
+/resources/database/dincome.txt

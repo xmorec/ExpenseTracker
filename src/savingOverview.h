@@ -91,6 +91,9 @@ public:
     // Income generation from external source
     void generateSavingsFromCSV();
 
+    // Expenses vector generation from Database SQLite
+    void generateExpensesFromDB();
+
     // Copying an Expense to a Table Row
     void copyExpenseToRow(int rowPos, bool moneyUnitFlag = true);
     
@@ -109,8 +112,11 @@ public:
     // Action from button: Add Button
     void addExpense();
 
-    // Action from button: Save Button
+    // Save Expenses to a external file
     void saveDataToCSV();
+
+    // Save Expenses to a SQLite Database
+    void saveDataToDB();
 
     // Action from button: Restore Button
     void restoreTableValues();

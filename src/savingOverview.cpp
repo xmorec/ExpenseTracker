@@ -20,7 +20,7 @@ savingOverview::savingOverview(User* loggedUser) : QHBoxLayout()
 
     // Save the values of Expense Table and the Income value to an external source
     QObject::connect(saveButton, &QPushButton::clicked, [=]() {
-        saveDataToCSV();
+        //saveDataToCSV();
         });
 
     // Restore the table values existing in an external Source
@@ -66,8 +66,8 @@ savingOverview::savingOverview(User* loggedUser) : QHBoxLayout()
 // Function that generates the Expenses Table
 void savingOverview::fillExpensesTable()
 {
-    // Update the expenses vector with the content of Database or a extern file
-    generateExpensesFromCSV();
+    // Update the expenses vector with the content of SQLite Database
+    generateExpensesFromDB();
 
     // Create the Expenses Table filled with the values of expenses vector (content from external source)
     int expensesNumber = static_cast<int>(expenses.size());
@@ -230,6 +230,15 @@ void savingOverview::generateExpensesFromCSV()
         expenses.push_back(importExpense);
         qDebug() << expenses[row - 1] << "\n";
     }
+}
+
+// Expenses vector generation from Database SQLite
+void savingOverview::generateExpensesFromDB()
+{
+    generateExpensesFromCSV();
+
+
+
 }
 
 // Income generation from external source
@@ -569,6 +578,12 @@ void savingOverview::addExpense()
 
     //Restoring the blocking signal state of the signals of 'expensesTable'
     expensesTable->blockSignals(emitingSignalState);
+
+}
+
+// Save Expenses and Income to SQLite Database
+void savingOverview::saveDataToDB()
+{
 
 }
 
