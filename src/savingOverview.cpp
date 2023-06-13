@@ -10,6 +10,9 @@ savingOverview::savingOverview(User* loggedUser) : QHBoxLayout()
     // Setting the current User as the logged User
     currentUser = loggedUser;
 
+    // Update the expenses vector and Income with the content of SQLite Database
+    getExpensesAndIncomeFromDB();
+
     //The Expenses Table is initializated, filled with the user values and Remove Buttons and also made updateable
     fillExpensesTable();
 
@@ -20,7 +23,7 @@ savingOverview::savingOverview(User* loggedUser) : QHBoxLayout()
 
     // Save the values of Expense Table and the Income value to an external source
     QObject::connect(saveButton, &QPushButton::clicked, [=]() {
-        //saveDataToCSV();
+        saveDataToDB();
         });
 
     // Restore the table values existing in an external Source
@@ -66,9 +69,6 @@ savingOverview::savingOverview(User* loggedUser) : QHBoxLayout()
 // Function that generates the Expenses Table
 void savingOverview::fillExpensesTable()
 {
-    // Update the expenses vector with the content of SQLite Database
-    generateExpensesFromDB();
-
     // Create the Expenses Table filled with the values of expenses vector (content from external source)
     int expensesNumber = static_cast<int>(expenses.size());
     if (!expensesTable)
@@ -128,9 +128,6 @@ void savingOverview::fillSavingTable()
     savingTable->setColumnCount(savingHeaders.length());
 
     savingTable->setHorizontalHeaderLabels(savingHeaders);
-
-    // Extracting the income value of the user from external source
-    generateSavingsFromCSV();
 
     // Setting the 'Income' value to the table
     auto indexIncome{ savingHeaders.indexOf(incomeHeader) };
@@ -229,8 +226,8 @@ void savingOverview::generateExpensesFromCSV()
     }
 }
 
-// Expenses vector generation from Database SQLite
-void savingOverview::generateExpensesFromDB()
+// Expenses vector and Income generation from Database SQLite
+void savingOverview::getExpensesAndIncomeFromDB()
 {
     userInfoBox->setWindowTitle("Loading User Expenses");
     userInfoBox->setWindowIcon(QIcon(icons::expTrackerIcon));
@@ -241,12 +238,12 @@ void savingOverview::generateExpensesFromDB()
     {
         std::string clause{ "WHERE username = '" + currentUser->getUserName().toStdString() + "'"};
         std::string columns{"expense, amount, frequency"};
-        std::vector<QStringList> expensesDB{ getRecords(db, DB::tableExpenses, columns, clause) };
-        expenses.reserve(25);
+        std::vector<QStringList> expensesDB{ getRecords(db, DB::tableExpenses, columns, clause) };        
 
-        // Load the database expenses to the Expense users
-        if (!expensesDB.empty())
+        // Load the database expenses to the Expense vector
+        if (!expensesDB.empty()) 
         {
+            expenses.reserve(expensesDB.size() + 5);
             for (QStringList& expense : expensesDB)
             {
                 // Adding the totalAmount = Expense Amount * Expense Frequency
@@ -254,6 +251,37 @@ void savingOverview::generateExpensesFromDB()
                 expense.append(totalAmount);
                 expenses.push_back(expense);
             }
+        }
+        else // There are no expenses for this user in the database
+        {
+            userInfoBox->setIcon(QMessageBox::Information);
+            userInfoBox->setText("For the moment, there are no expenses for this user.");
+            userInfoBox->exec();            
+        }
+
+        // Loading Income from Database
+        clause = "WHERE username = '" + currentUser->getUserName().toStdString() + "'" ;
+        columns = "income_amount, frequency";
+        std::vector<QStringList> incomeDB{ getRecords(db, DB::tableIncome, columns, clause) };        
+
+        // Load the database Income 
+        if (!incomeDB.empty())
+        {
+            double totalIncome{ 0 };
+            std::vector<QStringList> incomeVect{};
+            for (QStringList& income : incomeDB)
+            {
+                // Adding the totalAmount = Expense Amount * Expense Frequency
+                QString totalAmount{ QString::number(income[0].toDouble() * income[1].toDouble()) };
+                income.append(totalAmount);
+                incomeVect.push_back(income);
+                totalIncome += totalAmount.toDouble();
+            }
+            income = totalIncome;
+        }
+        else // There are no income for this user in the database
+        {
+            income = 0;
         }
 
         closeSQLiteDB(db);
@@ -601,13 +629,87 @@ void savingOverview::addExpense()
 // Save Expenses and Income to SQLite Database
 void savingOverview::saveDataToDB()
 {
+    // This function stores the table data values (Saving and Expenses Tables) to Database.
+    // To do it, first the Expenses and Income data from Database is removed. Afterwards, the data from tables is inserted to the Database.
+
+    sqlite3* db{};
+
+    // This msgBox will inform the saving status
+    userInfoBox->setWindowTitle("Saving Expenses");
+    userInfoBox->setWindowIcon(QIcon(icons::saveIcon));
+
+    // If the cell format is not correct
+    if (wrongCellFlag)
+    {
+        userInfoBox->setText("You cannot save your expense management until they have a proper format.");
+        userInfoBox->setIcon(QMessageBox::Warning);
+        userInfoBox->exec();
+        return;
+    }
+
+    // Checking and opening the SQLite Database
+    if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableExpenses, DB::tableIncome }) == DB::OPEN_SUCCESS)
+    {
+        // Preparig the clause for Deleting and Inserting values into the Database
+        std::string userName{ currentUser->getUserName().toStdString() };
+        std::string clause{ "WHERE username = '" + userName + "'" };
+
+        // Initializing a flag to check if the saving process was propperly conducted or not (true = correct saving, false = error occured)
+        bool savingStatusFlag{ false };
+
+        // If deleting Income and Expenses from Database was successful conducted
+        if (deletingRecords(db, DB::tableExpenses, clause) == true && deletingRecords(db, DB::tableIncome, clause) == true)
+        {
+            // Setting the Saving flag to 'true'
+            savingStatusFlag = true;
+
+            // Getting the indexes of "Expense name, Expense amount and Expense Frequency"
+            auto indexExpense{ expensesHeaders.indexOf(expenseHeader) };
+            auto indexAmount{ expensesHeaders.indexOf(amountHeader) };
+            auto indexFreq{ expensesHeaders.indexOf(frequencyHeader) };
+
+            // Executing the "INSERT INTO" SQLite Query for each Expense
+            std::string values{};
+            for (const QStringList& expense : expenses)
+            {
+                values = "'" + userName + "','" + expense[indexExpense].toStdString() + "','" + expense[indexAmount].toStdString() + "','" + expense[indexFreq].toStdString() + "'";
+
+                // Refreshing the Saving Status Flag according the result of SQL Insertion
+                savingStatusFlag &= insertRecord(db, DB::tableExpenses, values);
+            }
+
+            // Preparing the values of "INSERT INTO" SQLite Query for the Income
+            values = "'" + userName + "','" + "no_name" + "','" + std::to_string(income) + "','" + "1" + "'";
+
+            // Refreshing the Saving Status Flag according the result of SQL Insertion
+            savingStatusFlag &= insertRecord(db, DB::tableIncome, values);
+        }
+
+        // Checking the Status of Saving Process
+        if (savingStatusFlag)
+        {
+            userInfoBox->setText("Your expenses management has been saved!");
+            userInfoBox->setIcon(QMessageBox::Information);
+            userInfoBox->exec();
+        }
+        else
+        {
+            userInfoBox->setText("Your expenses management could not be saved due to an unknown error.");
+            userInfoBox->setIcon(QMessageBox::Critical);
+            userInfoBox->exec();
+            return;
+
+        }
+
+        closeSQLiteDB(db);
+    }       
 
 }
 
 // Action from button: Save Button
 void savingOverview::saveDataToCSV()
 {
-    //This function sets the expenses vector with the content of Database or a CSV file
+    //This function sets the expenses vector and Income with the content of Database or a CSV file
 
     // This msgBox will inform the saving status
     userInfoBox->setWindowTitle("Saving Expenses");
@@ -717,6 +819,9 @@ void savingOverview::restoreTableValues()
     rmvButtonsVect.clear();
     expenses.clear();
     expensesTable->setRowCount(0);
+
+    // Restore the last stored data (Expenses and Income) from Database
+    getExpensesAndIncomeFromDB();
 
     //Fill again the Expense Table with the last saved values
     fillExpensesTable();

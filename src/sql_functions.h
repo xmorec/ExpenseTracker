@@ -62,7 +62,7 @@ std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, c
 int updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition);
 
 // Deletes Records from a Table of Database
-int deletingRecords(sqlite3* db, const std::string& tableName, const std::string& clause = "");
+bool deletingRecords(sqlite3* db, const std::string& tableName, const std::string& clause = "");
 
 
 

@@ -73,9 +73,9 @@ private:
     }};
 
     tableEdit* savingTable{ nullptr }; // Saving Table pointer
-    double income{}; // Income value
-    double totalExpense{}; // The total amount of ALL expenses
-    double savings{}; // The Savings value
+    double income{-1}; // Income value
+    double totalExpense{-1}; // The total amount of ALL expenses
+    double savings{-1}; // The Savings value
     
 
 public:
@@ -95,8 +95,8 @@ public:
     // Income generation from external source
     void generateSavingsFromCSV();
 
-    // Expenses vector generation from Database SQLite
-    void generateExpensesFromDB();
+    // Update the expenses vector and Income with the content of SQLite Database
+    void getExpensesAndIncomeFromDB();
 
     // Copying an Expense to a Table Row
     void copyExpenseToRow(int rowPos, bool moneyUnitFlag = true);

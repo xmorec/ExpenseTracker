@@ -300,7 +300,7 @@ int updateRecords(sqlite3* db, const std::string& tableName, const std::string& 
 }
 
 // Deletes Records from a Table of Database
-int deletingRecords(sqlite3* db, const std::string& tableName, const std::string& clause)
+bool deletingRecords(sqlite3* db, const std::string& tableName, const std::string& clause)
 {
 	// Setting the SQL Query
 	sqlite3_stmt* stmt{};
@@ -312,11 +312,11 @@ int deletingRecords(sqlite3* db, const std::string& tableName, const std::string
 	if (rc != SQLITE_OK) // Construction of the statement was not successful
 	{
 		sqlite3_finalize(stmt);
-		return -1;
+		return false;
 	}
 
 	sqlite3_step(stmt); // Executing the SQL Query to the Database
 	sqlite3_finalize(stmt);
 
-	return 1;
+	return true;
 }
