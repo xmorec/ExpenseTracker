@@ -5,11 +5,13 @@
 #include <QString>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QTimer>
 #include <fstream>
 #include "constants.h"
 #include "sql_functions.h"
 #include "User.h"
 #include "tableEdit.h"
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -19,6 +21,8 @@
 
 class savingOverview : public QHBoxLayout
 {
+
+    Q_OBJECT
 
 private:
 
@@ -124,6 +128,11 @@ public:
 
     // Action from button: Restore Button
     void restoreTableValues();
+
+
+    signals:
+        // Emited signal when table changes its size from removing or restoring expenses
+        void tableSizeMod(); 
 
 };
 

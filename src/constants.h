@@ -27,7 +27,8 @@ namespace icons
 {
 	inline const QString expTrackerIcon{ "resources/icons/ExpTrIcon.png" };
 	inline const QString loggingIcon { "resources/icons/logsession.png" };
-	inline const QString saveIcon{ "resources/icons/saveIcon.png" };	
+	inline const QString saveIcon{ "resources/icons/saveIcon.png" };
+	inline const QString prefIcon{ "resources/icons/preferences.png" };
 }
 
 

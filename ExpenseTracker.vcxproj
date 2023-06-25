@@ -91,6 +91,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="lib\sqlite3.c" />
+    <ClCompile Include="src\iconButton.cpp" />
     <ClCompile Include="src\labelButton.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mainWindow.cpp" />
@@ -99,16 +100,19 @@
     <ClCompile Include="src\sql_functions.cpp" />
     <ClCompile Include="src\tableEdit.cpp" />
     <ClCompile Include="src\User.cpp" />
+    <ClCompile Include="src\usr_preferences.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\constants.h" />
+    <ClInclude Include="src\usr_preferences.h" />
+    <QtMoc Include="src\iconButton.h" />
     <ClInclude Include="src\sql_functions.h" />
     <ClInclude Include="src\User.h" />
     <QtMoc Include="src\loggingWindow.h" />
     <QtMoc Include="src\labelButton.h" />
-    <ClInclude Include="src\savingOverview.h" />
+    <QtMoc Include="src\savingOverview.h" />
     <QtMoc Include="src\tableEdit.h" />
-    <ClInclude Include="src\mainWindow.h" />
+    <QtMoc Include="src\mainWindow.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

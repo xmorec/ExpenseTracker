@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
         delete loggWin;
 
         // Executing the main window program (screen geometry parameters are set as input parameters to resize the main window)
-        mainWindow* window = new mainWindow(currentUser, app.primaryScreen()->availableGeometry());
+        mainWindow* window = new mainWindow(currentUser);
         
         return app.exec();
     }

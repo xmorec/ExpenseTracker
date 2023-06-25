@@ -2,11 +2,14 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QRect>
+#include <QPushButton>
+#include "iconButton.h"
+
 #include "constants.h"
 #include "tableEdit.h"
 #include "savingOverview.h"
 #include "User.h"
+#include "usr_preferences.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -16,18 +19,12 @@
 class mainWindow : public QMainWindow
 {
 
-private:
-
-    // Screen Resize Factors
-    double widthFactor{0.7};
-    double heightFactor{0.8};
-
-    
+    Q_OBJECT
+            
 public:
 
-    // Constructor of mainWindow that take as input parameter QRect object that will be used to
-    // resize the mainWindow accordingly
-    mainWindow(User* currentUser, const QRect& screen);
+    // Constructor of mainWindow 
+    mainWindow(User* currentUser);
 
 };
 

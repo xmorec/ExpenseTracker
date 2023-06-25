@@ -3,8 +3,6 @@
 // Generates the main QDialog for the Logging Session
 loggingWindow::loggingWindow() : QDialog()
 {
-	testMyDB();
-
 	setWindowIcon(QIcon(icons::expTrackerIcon));
 	setWindowTitle("Sign In");
 
@@ -16,7 +14,7 @@ loggingWindow::loggingWindow() : QDialog()
 	userEdit->setFixedWidth(lineEditWidth);
 	passEdit->setFixedWidth(lineEditWidth);
 
-	// Giving a onw style to the Title
+	// Giving a own style to the Title
 	QFont font(titlePopup->font().family(), 11, QFont::Bold);
 	titlePopup->setFont(font);
 

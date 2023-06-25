@@ -582,6 +582,9 @@ void savingOverview::removeExpense(int row)
 
     // Updating the widget fitting
     expensesTable->adaptWidgetToTable();
+
+    // Since table size is modified, a signal is emited after all changes are finalized (it is needed some milliseconds)
+    QTimer::singleShot(80, this, &savingOverview::tableSizeMod);
 }
 
 // Action from button: Add Button
@@ -833,4 +836,7 @@ void savingOverview::restoreTableValues()
     //Restoring the blocking signal state of the signals of 'expensesTable'
     expensesTable->blockSignals(emitingExpSignalState);
     savingTable->blockSignals(emitingSavSignalState);
-}
+
+    // Since table size is modified, a signal is emited after all changes are finalized (it is needed some milliseconds)
+    QTimer::singleShot(80, this, &savingOverview::tableSizeMod);    
+ }
