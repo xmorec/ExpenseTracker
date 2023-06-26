@@ -80,9 +80,6 @@ void loggingWindow::loadUsersFromDB()
 			// Check if tableUsers is created
 			if (isTableCreated(db, DB::tableUsers) == 1)
 			{
-				//records gets the output of the SELECT query given by 'getRecords()'
-				std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, salt, hash_password") };
-
 				//Get the number of users with admin privileges
 				int adminUsersNum = getRecordNumber(db, DB::tableUsers, "WHERE user_type = '" + DB::UserType::admin + "'");
 
@@ -106,16 +103,21 @@ void loggingWindow::loadUsersFromDB()
 					userInfoBox->exec();
 				}
 
+				//records gets the output of the SELECT query given by 'getRecords()'
+				std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, user_type") };
+
 				// Load the database users to the Users vector 'users'
 				if(!records.empty())
 				{				
 					for (const QStringList& record : records)
 					{
 						User* userDB{ new User(record[0])};
-						userDB->setSalt(record[1]);
-						userDB->setHashPassword(record[2]);						
-						userDB->setSaltDB(record[1].toUtf8());
-						userDB->setHashPasswordDB(record[2].toUtf8());
+						userDB->setUserRName(record[1]);
+						userDB->setSalt(record[2]);
+						userDB->setHashPassword(record[3]);						
+						userDB->setSaltDB(record[2].toUtf8());
+						userDB->setHashPasswordDB(record[3].toUtf8());
+						userDB->setUserType(record[4]);
 						users.push_back(userDB);
 					}
 				}

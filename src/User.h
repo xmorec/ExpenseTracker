@@ -14,6 +14,7 @@ class User
 
 private:
 	QString userName{};
+	QString userRName{};
 	QString salt{};
 	QString hashPassword{};
 	QString userType{};
@@ -31,6 +32,21 @@ public:
 		return userName;
 	}
 
+	void setUserName(const QString& userName)
+	{
+		this->userName = userName;
+	}
+
+	const QString& getUserRName()
+	{
+		return userRName;
+	}
+
+	void setUserRName(const QString& userRName)
+	{
+		this->userRName = userRName;
+	}
+
 	const QString& getUserType()
 	{
 		return userType;
@@ -46,19 +62,14 @@ public:
 		return hashPassword;
 	}
 
+	void setHashPassword(const QString& hashPassword)
+	{
+		this->hashPassword = hashPassword;
+	}
+
 	const QString& getSalt()
 	{
 		return salt;
-	}
-
-	const QByteArray& getHashPasswordDB()
-	{
-		return hashPasswordDB;
-	}
-
-	const QByteArray& getSaltDB()
-	{
-		return saltDB;
 	}
 
 	void setSalt(const QString& salt)
@@ -66,9 +77,19 @@ public:
 		this->salt = salt;
 	}
 
-	void setHashPassword(const QString& hashPassword)
+	const QByteArray& getHashPasswordDB()
 	{
-		this->hashPassword = hashPassword;
+		return hashPasswordDB;
+	}
+
+	void setHashPasswordDB(const QByteArray& hashPassword)
+	{
+		this->hashPasswordDB = hashPassword;
+	}
+
+	const QByteArray& getSaltDB()
+	{
+		return saltDB;
 	}
 
 	void setSaltDB(const QByteArray& salt)
@@ -76,10 +97,6 @@ public:
 		this->saltDB = salt;
 	}
 
-	void setHashPasswordDB(const QByteArray& hashPassword)
-	{
-		this->hashPasswordDB = hashPassword;
-	}
 
 };
 

@@ -33,6 +33,10 @@ mainWindow::mainWindow(User* currentUser)
         prefWin->exec();
         });
 
+    QObject::connect(prefWin, &QDialog::rejected, [=]() {
+        prefWin->restartContents();
+        });
+
     //////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////  EXPENSE/SAVING OVERVIEW  ///////////////////////////////////////
 

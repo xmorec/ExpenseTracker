@@ -104,7 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\constants.h" />
-    <ClInclude Include="src\usr_preferences.h" />
+    <QtMoc Include="src\usr_preferences.h" />
     <QtMoc Include="src\iconButton.h" />
     <ClInclude Include="src\sql_functions.h" />
     <ClInclude Include="src\User.h" />

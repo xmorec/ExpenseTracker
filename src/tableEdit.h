@@ -4,6 +4,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QString>
+#include "constants.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -18,11 +19,6 @@ class tableEdit : public QTableWidget
 
 private:
     
-    // Code Colors for cells
-    inline static const QColor disableColor{ QColor(Qt::gray) };
-    inline static const QColor enableColor{ QColor(Qt::white) };
-    inline static const QColor errorColor{ "#EA9791"};
-
     // Headers Style:
     inline static const QString headerStyle{ 
         "QHeaderView::section{"

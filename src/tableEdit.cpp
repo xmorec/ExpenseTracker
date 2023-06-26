@@ -39,12 +39,12 @@ void tableEdit::disableCell(int row, int column, bool disable)
     if (disable) //Disabling editing and selecting the cell
     {
         item->setFlags(item->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
-        item->setBackground(disableColor);
+        item->setBackground(cellColor::disableColor);
     }
     else //Enabling editing and selecting the cell
     {
         item->setFlags(item->flags() | Qt::ItemIsEditable | Qt::ItemIsSelectable);
-        item->setBackground(enableColor);
+        item->setBackground(cellColor::enableColor);
     }
 
 }
@@ -67,11 +67,11 @@ void tableEdit::setWrongCell(int row, int column, bool wrong)
 
     if (wrong) //Setting wrong cell
     {
-        item->setBackground(errorColor);
+        item->setBackground(cellColor::errorColor);
     }
     else //Not wrong cell: Setting normal color
     {
-        item->setBackground(enableColor);
+        item->setBackground(cellColor::enableColor);
     }
 
 }

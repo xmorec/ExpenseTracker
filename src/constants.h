@@ -32,4 +32,18 @@ namespace icons
 }
 
 
+namespace cellColor
+{
+	inline static const QColor disableColor{ QColor(Qt::gray) };
+	inline static const QColor enableColor{ QColor(Qt::white) };
+	inline static const QColor errorColor{ "#EA9791" };
+}
+
+namespace fieldColor
+{
+	inline static const QString disable { "background-color: rgb(236, 236, 236); "};
+	inline static const QString enable { "background-color: white; " };
+}
+
+
 #endif
