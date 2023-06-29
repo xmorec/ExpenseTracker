@@ -59,7 +59,7 @@ bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& 
 std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, const std::string& columns = "*", const std::string& clause = "");
 
 // Updates Records from a Table of Database
-int updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition);
+bool updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition);
 
 // Deletes Records from a Table of Database
 bool deletingRecords(sqlite3* db, const std::string& tableName, const std::string& clause = "");

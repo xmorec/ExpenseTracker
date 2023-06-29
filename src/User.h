@@ -3,6 +3,11 @@
 
 #include <QString>
 #include <QByteArray>
+#include <QCryptographicHash>
+#include <QRandomGenerator>
+#include <QRegularExpression>
+#include <QMessageBox>
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -24,80 +29,60 @@ private:
 
 	
 public:
-	User(const QString& inputName) : userName(inputName)
-	{	}
+	// Constructs a User Object getting as an input the username
+	User(const QString& inputName);
 
-	const QString& getUserName()
-	{
-		return userName;
-	}
+	// Returns the Username
+	const QString& getUserName();
 
-	void setUserName(const QString& userName)
-	{
-		this->userName = userName;
-	}
+	// Sets the Username
+	void setUserName(const QString& userName);
 
-	const QString& getUserRName()
-	{
-		return userRName;
-	}
+	// Returns the Name of the user
+	const QString& getUserRName();
 
-	void setUserRName(const QString& userRName)
-	{
-		this->userRName = userRName;
-	}
+	// Sets the name of the user
+	void setUserRName(const QString& userRName);
 
-	const QString& getUserType()
-	{
-		return userType;
-	}
+	// Gets the User Type
+	const QString& getUserType();
 
-	void setUserType(const QString& userType)
-	{
-		this->userType = userType;
-	}
+	// Sets the User Type
+	void setUserType(const QString& userType);
 
-	const QString& getHashPassword()
-	{
-		return hashPassword;
-	}
+	// Returns the Hash Password
+	const QString& getHashPassword();
 
-	void setHashPassword(const QString& hashPassword)
-	{
-		this->hashPassword = hashPassword;
-	}
+	// Sets the Hash Password
+	void setHashPassword(const QString& hashPassword);
 
-	const QString& getSalt()
-	{
-		return salt;
-	}
+	// Returns the Salt
+	const QString& getSalt();
 
-	void setSalt(const QString& salt)
-	{
-		this->salt = salt;
-	}
+	// Sets the Salt
+	void setSalt(const QString& salt);
 
-	const QByteArray& getHashPasswordDB()
-	{
-		return hashPasswordDB;
-	}
+	// Returns the Hash Password in UTF-8
+	const QByteArray& getHashPasswordDB();
 
-	void setHashPasswordDB(const QByteArray& hashPassword)
-	{
-		this->hashPasswordDB = hashPassword;
-	}
+	// Sets the Hash Password in UTF-8 
+	void setHashPasswordDB(const QByteArray& hashPassword);
 
-	const QByteArray& getSaltDB()
-	{
-		return saltDB;
-	}
+	// Gets the Salt in UTF-8
+	const QByteArray& getSaltDB();
 
-	void setSaltDB(const QByteArray& salt)
-	{
-		this->saltDB = salt;
-	}
-
+	// Sets the Salt in UTF-8
+	void setSaltDB(const QByteArray& salt);
 
 };
+
+// Generating the hashPassword from the plain password and the generated Salt
+QString hashPassword(const QString& plainPassword, const QString& userSalt);
+
+// Checks if the input user-name has a correct text format
+bool isCorrectUserNameFormat(std::vector<User*>& users, const QString& newUsername, QMessageBox* userInfoBox);
+
+// Checks if the input name has a correct text format
+bool isCorrectNameFormat(std::vector<User*>& users, const QString& name, QMessageBox* userInfoBox);
 
 #endif

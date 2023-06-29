@@ -69,70 +69,53 @@ loggingWindow::loggingWindow() : QDialog()
 void loggingWindow::loadUsersFromDB()
 {
 
-	// Checking if Database file exists
-	if (isDBExisting())
+	sqlite3* db{};
+
+	//Check if DB exists, and if so, Users table is open
+	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
 	{
-		sqlite3* db{};
+		//Get the number of users with admin privileges
+		int adminUsersNum = getRecordNumber(db, DB::tableUsers, "WHERE user_type = '" + DB::UserType::admin + "'");
 
-		//Opening database
-		if (openSQLiteDB(db))
+		// If there is no admin in database, one is created
+		if (adminUsersNum == 0)
 		{
-			// Check if tableUsers is created
-			if (isTableCreated(db, DB::tableUsers) == 1)
+			// Tries to insert the new admin to DB and also adds it to the 'users' vector
+			if (insertUserToDB(db, "admin"))
 			{
-				//Get the number of users with admin privileges
-				int adminUsersNum = getRecordNumber(db, DB::tableUsers, "WHERE user_type = '" + DB::UserType::admin + "'");
-
-				// If there is no admin in database, one is created
-				if (adminUsersNum == 0)
-				{
-					// Tries to insert the new admin to DB and also adds it to the 'users' vector
-					if (insertUserToDB(db, "admin"))
-					{
-						//Show infoBox
-						userInfoBox->setWindowTitle("Admin Creation");
-						userInfoBox->setIcon(QMessageBox::Information);
-						userInfoBox->setText("Admin User is created\nUser: \"admin\"\nPass: \"admin\"");
-					}
-					else
-					{
-						userInfoBox->setIcon(QMessageBox::Warning);
-						userInfoBox->setText("An admin should be created but it was not possible.\nRestart the application");
-					}
-
-					userInfoBox->exec();
-				}
-
-				//records gets the output of the SELECT query given by 'getRecords()'
-				std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, user_type") };
-
-				// Load the database users to the Users vector 'users'
-				if(!records.empty())
-				{				
-					for (const QStringList& record : records)
-					{
-						User* userDB{ new User(record[0])};
-						userDB->setUserRName(record[1]);
-						userDB->setSalt(record[2]);
-						userDB->setHashPassword(record[3]);						
-						userDB->setSaltDB(record[2].toUtf8());
-						userDB->setHashPasswordDB(record[3].toUtf8());
-						userDB->setUserType(record[4]);
-						users.push_back(userDB);
-					}
-				}
-			}
-			else // If Database tableUsers is not found
-			{
-				userInfoBox->setWindowTitle("Warning");
-				userInfoBox->setIcon(QMessageBox::Warning);
-				userInfoBox->setText("Users could not be loaded (no database table found)!");
-
 				//Show infoBox
-				userInfoBox->exec();
+				userInfoBox->setWindowTitle("Admin Creation");
+				userInfoBox->setIcon(QMessageBox::Information);
+				userInfoBox->setText("Admin User is created\nUser: \"admin\"\nPass: \"admin\"");
 			}
-			closeSQLiteDB(db);
+			else
+			{
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->setText("An admin should be created but it was not possible.\nRestart the application");
+			}			
+			userInfoBox->exec();
 		}
+
+		//records gets the output of the SELECT query given by 'getRecords()'
+		std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, user_type") };
+
+		// Load the database users to the Users vector 'users'
+		if (!records.empty())
+		{
+			for (const QStringList& record : records)
+			{
+				User* userDB{ new User(record[0]) };
+				userDB->setUserRName(record[1]);
+				userDB->setSalt(record[2]);
+				userDB->setHashPassword(record[3]);
+				userDB->setSaltDB(record[2].toUtf8());
+				userDB->setHashPasswordDB(record[3].toUtf8());
+				userDB->setUserType(record[4]);
+				users.push_back(userDB);
+			}
+		}
+
+		closeSQLiteDB(db);
 	}
 }
 
@@ -197,48 +180,32 @@ void loggingWindow::createUser()
 	QString newUsername = userEdit->text();
 
 	//Checks if input user name has a correct format and, if so, hash password and salt is generated for this user
-	if (isCorrectNameFormat(newUsername))
+	if (isCorrectUserNameFormat(users, newUsername, userInfoBox))
 	{
-		// Adding new user to Database: Checking its availability
-		if (isDBExisting())
-		{
-			sqlite3* db{};
 
-			// Opening Database
-			if (openSQLiteDB(db))
+		sqlite3* db{};
+
+		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
+		{
+
+			// Tries to insert the new User to DB and also adds it to the 'users' vector
+			if (insertUserToDB(db, newUsername))
 			{
-				// Checking if Table is created
-				if (isTableCreated(db, DB::tableUsers) == 1)
-				{	
-					// Tries to insert the new User to DB and also adds it to the 'users' vector
-					if (insertUserToDB(db, newUsername))
-					{
-						userInfoBox->setIcon(QMessageBox::Information);
-						userInfoBox->setText("User Created!");
-					}
-					else
-					{
-						userInfoBox->setIcon(QMessageBox::Warning);
-						userInfoBox->setText("User could not be created!");
-					}
-				}
-				else // When Users Table is not found
-				{
-					userInfoBox->setIcon(QMessageBox::Warning);
-					userInfoBox->setText("User could not be created (no database table found)!");
-				}				
-				closeSQLiteDB(db);
-			}			
-		}
-		else
-		{
-			userInfoBox->setIcon(QMessageBox::Warning);
-			userInfoBox->setText("No Database found!");
-		}
+				userInfoBox->setIcon(QMessageBox::Information);
+				userInfoBox->setText("User Created!");
+			}
+			else
+			{
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->setText("User could not be created!");
+			}
 
-		//Show infoBox
-		userInfoBox->exec();
+			closeSQLiteDB(db);
 
+			//Show infoBox
+			userInfoBox->exec();
+		}
+		
 		// The Logging View is loaded
 		loadLoggingView();
 	}
@@ -293,6 +260,7 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		users.push_back(newUser);
 
 		// Sotre Salt, Hash Password and User Type to the new User
+		newUser->setUserRName(newUsername);
 		newUser->setHashPassword(hashPass);
 		newUser->setSalt(userSalt);
 		newUser->setHashPasswordDB(hashPass.toUtf8());
@@ -322,73 +290,6 @@ QString loggingWindow::generateSalt(int saltSize)
 	}
 
 	return QString::fromLatin1(saltByteArray);
-}
-
-// Generating the hashPassword from the plain password and the generated Salt
-QString loggingWindow::hashPassword(const QString& plainPassword, const QString& userSalt)
-{
-	// Creating the type of Cryptographic Hash Operation (SHA-256)
-	QCryptographicHash hash{ QCryptographicHash(QCryptographicHash::Sha256) };
-
-	// Generating the input Data of Hash (Salt + Plain Password)
-	QByteArray inputData{ userSalt.toLatin1() + plainPassword.toUtf8() };
-
-	// Generating the Hash result from the input
-	hash.addData(inputData);
-	QByteArray hashPassword_ByteArr{ hash.result() };
-
-	//From every byte of 'hashPassword_ByteArr' it is converted to 0-255 value of QString
-	QString hashPassword{ QString::fromLatin1(hashPassword_ByteArr) };
-
-	return hashPassword;
-}
-
-// Checks if the input user name (newUsername) has a correct text format
-bool loggingWindow::isCorrectNameFormat(const QString& newUsername)
-{
-	// Checks the input user name is empty
-	if (newUsername.isEmpty())
-	{
-		userInfoBox->setText("Username cannot be empty.");
-		userInfoBox->setIcon(QMessageBox::Warning);
-		userInfoBox->exec();
-		return false;
-	}
-
-	// Checks if user tries to set their name to "admin"
-	if (newUsername.toLower() == "admin")
-	{
-		userInfoBox->setText("Username cannot be \"admin\"");
-		userInfoBox->setIcon(QMessageBox::Warning);
-		userInfoBox->exec();
-		return false;
-	}
-
-	//Initializing pattern useful to detect only correct input character values: "A-Z, a-z, 0-9, '.', '_'
-	QRegularExpression validUserNameValues("^[A-Za-z0-9_\\.]+$");
-
-	// Checks if the input user name (newUsername) does not match de correct text format
-	if (!validUserNameValues.match(newUsername).hasMatch())
-	{
-		userInfoBox->setText("Username should be made of simple letters, numbers, \"_\", \".\"\n and without spaces.");
-		userInfoBox->setIcon(QMessageBox::Warning);
-		userInfoBox->exec();
-		return false;
-	}
-
-	// Checks if the newUsername already exists from all other users
-	for (auto user : users)
-	{
-		if (newUsername.toLower() == user->getUserName().toLower())
-		{
-			userInfoBox->setText("This user name already exists.");
-			userInfoBox->setIcon(QMessageBox::Warning);
-			userInfoBox->exec();
-			return false;
-		}
-	}
-
-	return true;
 }
 
 // Load Create User View in the QDialog

@@ -18,24 +18,32 @@ mainWindow::mainWindow(User* currentUser)
 
 
     //////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////  ADDING ICON-BUTTONS  ///////////////////////////////////////////
+    ////////////////////////  ADDING PREFERENCES ICON  ///////////////////////////////////////
 
     // Add a clickable Icon related to the Preferences
     QIcon prefIcon(icons::prefIcon);  
     iconButton* iconButt = new iconButton(prefIcon);
     mainVLayout->addWidget(iconButt,0,Qt::AlignTop);
 
-    // Declaring the Preferences Window
+    // Declaring and Initializing the Preferences Window
     confWindow* prefWin{new confWindow(currentUser)};
 
     // When clicking in the Preferences Button, the Preferences Window is shown
     QObject::connect(iconButt, &QPushButton::clicked, [=]() {
-        prefWin->exec();
+        QTimer::singleShot(80, [=]() {prefWin->winSize = prefWin->size(); });
+        prefWin->exec();        
         });
 
-    QObject::connect(prefWin, &QDialog::rejected, [=]() {
+    // When Preferences Window is closed, its size should be restored in case it is opened again
+    QObject::connect(prefWin, &QDialog::rejected, [=]() {        
         prefWin->restartContents();
         });
+
+    // When username is updated from Prefernces Window, Main Window title should be updated too   
+   QObject::connect(prefWin, &confWindow::userNameMod, [=]() {
+        setWindowTitle("Expense Tracker - " + currentUser->getUserName());
+        });
+        
 
     //////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////  EXPENSE/SAVING OVERVIEW  ///////////////////////////////////////
@@ -47,7 +55,7 @@ mainWindow::mainWindow(User* currentUser)
 
     // Main Window size is resized after the Expense Table is resized too
     QObject::connect(savingTablesLayout, &savingOverview::tableSizeMod, [=]() {        
-        move(pos()); // This line is needed to fix a Qt Bug that does not update the Main Window if it does not detect a window movement
+        move(pos()); // This line is needed to fix a Qt Bug that does not update the Main Window size if it does not detect a window movement
         setMaximumSize(sizeHint()); // Resizing the Main Window to fit all content inside
         });
     

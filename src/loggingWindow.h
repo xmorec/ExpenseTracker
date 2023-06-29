@@ -70,14 +70,8 @@ public:
 	// Insert the created user to DB
 	bool insertUserToDB(sqlite3* db, const QString& newUsername);
 
-	// Generating the hashPassword from the plain password and the generated Salt
-	QString hashPassword(const QString& plainPassword, const QString& userSalt);
-
 	// Salt generating with a size of 'saltSize' bytes
 	QString generateSalt(int saltSize = 8);
-
-	// Checks if the input user name (newUsername) has a correct text format
-	bool isCorrectNameFormat(const QString& newUsername);
 	
 	// Load Create User View in the QDialog
 	void loadCreateUserView();

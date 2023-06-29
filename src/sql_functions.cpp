@@ -276,7 +276,7 @@ std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, c
 }
 
 // Updates Records from a Table of Database
-int updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition)
+bool updateRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& values, const std::string& condition)
 {
 	//Setting the SQL Query where 'condition' could be "column_name = 'value'"
 	sqlite3_stmt* stmt{};
@@ -289,13 +289,13 @@ int updateRecords(sqlite3* db, const std::string& tableName, const std::string& 
 	if (rc != SQLITE_OK) 
 	{
 		sqlite3_finalize(stmt);
-		return -1;
+		return false;
 	}
 		
 	sqlite3_step(stmt); // Executing the SQL Query
 	sqlite3_finalize(stmt);
 
-	return 1;
+	return true;
 
 }
 
