@@ -204,7 +204,7 @@ void confWindow::updateName()
 		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
 		{
 			// Flag that gets true in case the input parameter is correctly written into Database
-			bool updateFlag = updateRecords(db, DB::tableUsers, "name", newName.toStdString(), "name = '" + currentUser->getUserRName().toStdString() + "'");
+			bool updateFlag = updateRecords(db, DB::tableUsers, "name", newName.toStdString(), "username = '" + currentUser->getUserName().toStdString() + "'");
 
 			closeSQLiteDB(db);
 
@@ -280,9 +280,112 @@ void confWindow::updateUserName()
 
 void confWindow::updatePassword()
 {
+
 	userInfoBox->setWindowTitle("Password modification");
 
-	saveButtons[passPos]->setDefault(false); // Save button is not pressed by default when clicking Enter
+	// Get the input username
+	QString oldPass { oldPassEdit->text() };
+	QString newPass { fieldEdit[passPos]->text() };
+	QString repPass { repeatPassEdit->text() };
+	
+	QString userSalt{ currentUser->getSalt() };
+	QString userPass{ currentUser->getHashPassword() };
+
+	// When Old Password field has not the same Password as the current one
+	if(!(hashPassword(oldPass, userSalt) == userPass))
+	{
+		userInfoBox->setText("Old password is not your current password");
+		userInfoBox->setIcon(QMessageBox::Warning);
+		userInfoBox->exec();
+		return;
+	}
+
+	// When the Repeated Password has not the same Password as the New input Password
+	if (!(newPass == repPass))
+	{
+		userInfoBox->setText("New password is not the same as the repeated password");
+		userInfoBox->setIcon(QMessageBox::Warning);
+		userInfoBox->exec();
+		return;
+	}
+	
+	//When the New password is the same current one
+	if (hashPassword(newPass, userSalt) == userPass)
+	{
+		cancelField(passPos);
+		saveButtons[passPos]->setDefault(false); // Save button is not pressed by default when clicking Enter
+		return;
+	}
+
+	sqlite3* db{};
+
+	// Checks if DB exists and if so, the input parameter is updated in the table
+	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
+	{		
+
+		QString hashPass{ hashPassword(newPass, userSalt) };		
+
+		std::string hashPassDB{ hashPass.toUtf8().toStdString() };
+		std::string condition{ "username = '" + currentUser->getUserName().toStdString() + "'" };		
+
+		std::string userName{ currentUser->getUserName().toStdString() };
+		bool hpassFlag{ updateRecords(db, DB::tableUsers, DB::col_hashpass, hashPassDB, DB::col_username + " = '" + userName + "'") };
+		bool saltFlag{ true };		
+
+		int it{ 0 };
+		int maxTries{ 7 };
+
+		// If hash password or salt are generating troubles to Database, they are generated again
+		// in order to trying another User Insertion to Database (max tries: 'maxTries')
+		// insertRecord() is the function used to send the SQL Query to database
+		while (it < maxTries && (hpassFlag == false || saltFlag == false))
+		{
+
+			// Generating Salt
+			userSalt = generateSalt(8);
+
+			// Generating Hash Password
+			hashPass = hashPassword(newPass, userSalt);
+
+			hashPassDB = hashPass.toUtf8().toStdString();
+			condition =  "username = '" + currentUser->getUserName().toStdString() + "'";
+
+			hpassFlag = updateRecords(db, DB::tableUsers, DB::col_hashpass, hashPassDB, DB::col_username + " = '" + userName + "'");
+			saltFlag = updateRecords(db, DB::tableUsers, DB::col_salt, userSalt.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
+
+			++it;
+		}
+
+		// When updating User Password and Salt to the DB was successfuly done
+		if (it < maxTries)
+		{
+			// Store Salt, Hash Password to the current User
+			currentUser->setHashPassword(hashPass);
+			currentUser->setSalt(userSalt);
+			currentUser->setHashPasswordDB(hashPass.toUtf8());
+			currentUser->setSaltDB(userSalt.toUtf8());
+
+			cancelField(passPos);
+			saveButtons[passPos]->setDefault(false); // Save button is not pressed by default when clicking Enter
+
+			userInfoBox->setText("Password was successfuly changed");
+			userInfoBox->setIcon(QMessageBox::Information);
+			userInfoBox->exec();
+
+		}
+		else
+		{
+			updateRecords(db, DB::tableUsers, DB::col_hashpass, userPass.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
+			updateRecords(db, DB::tableUsers, DB::col_salt, userSalt.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
+
+			userInfoBox->setText("New password could not be successfuly saved. Please, try again.");
+			userInfoBox->setIcon(QMessageBox::Warning);
+			userInfoBox->exec();
+		}
+
+		closeSQLiteDB(db);
+	}
+	
 }
 
 void confWindow::editField(int pos)

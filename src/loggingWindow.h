@@ -70,9 +70,6 @@ public:
 	// Insert the created user to DB
 	bool insertUserToDB(sqlite3* db, const QString& newUsername);
 
-	// Salt generating with a size of 'saltSize' bytes
-	QString generateSalt(int saltSize = 8);
-	
 	// Load Create User View in the QDialog
 	void loadCreateUserView();
 

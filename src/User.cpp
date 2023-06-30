@@ -89,6 +89,11 @@ void User::setSaltDB(const QByteArray& salt)
 	this->saltDB = salt;
 }
 
+
+////////////////////////////////////////////////////////////////////////
+// SUPPORTING FUNCTIONS TO CREATE PASSWORD AND CHECK USER NAME FORMAT //
+////////////////////////////////////////////////////////////////////////
+
 // Generating the hashPassword from the plain password and the generated Salt
 QString hashPassword(const QString& plainPassword, const QString& userSalt)
 {
@@ -181,4 +186,20 @@ bool isCorrectNameFormat(std::vector<User*>& users, const QString& name, QMessag
 	}
 
 	return true;
+}
+
+// Salt generating with a size of 'saltSize' bytes
+QString generateSalt(int saltSize)
+{
+	// Initializing Salt Byte Array of size 'saltSize'
+	QByteArray saltByteArray{};
+	saltByteArray.resize(saltSize);
+
+	// Filling each byte of Salt with a random unsigned character (int value rank 0-255 (1 byte))
+	for (int i = 0; i < saltSize; ++i)
+	{
+		saltByteArray[i] = static_cast<unsigned char>(QRandomGenerator::system()->generate());
+	}
+
+	return QString::fromLatin1(saltByteArray);
 }

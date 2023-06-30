@@ -85,4 +85,7 @@ bool isCorrectUserNameFormat(std::vector<User*>& users, const QString& newUserna
 // Checks if the input name has a correct text format
 bool isCorrectNameFormat(std::vector<User*>& users, const QString& name, QMessageBox* userInfoBox);
 
+// Salt generating with a size of 'saltSize' bytes
+QString generateSalt(int saltSize);
+
 #endif

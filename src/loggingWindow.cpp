@@ -253,13 +253,13 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		++it;
 	}
 
-	// Inserting User to the DB was successfuly done
+	// When inserting User to the DB was successfuly done
 	if (it < maxTries)
 	{
 		// Adding the new user to 'users' vector
 		users.push_back(newUser);
 
-		// Sotre Salt, Hash Password and User Type to the new User
+		// Store Salt, Hash Password and User Type to the new User
 		newUser->setUserRName(newUsername);
 		newUser->setHashPassword(hashPass);
 		newUser->setSalt(userSalt);
@@ -274,22 +274,6 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		return false;
 	}
 
-}
-
-// Salt generating with a size of 'saltSize' bytes
-QString loggingWindow::generateSalt(int saltSize)
-{
-	// Initializing Salt Byte Array of size 'saltSize'
-	QByteArray saltByteArray{};
-	saltByteArray.resize(saltSize);
-
-	// Filling each byte of Salt with a random unsigned character (int value rank 0-255 (1 byte))
-	for (int i = 0; i < saltSize; ++i)
-	{
-		saltByteArray[i] = static_cast<unsigned char>(QRandomGenerator::system()->generate());
-	}
-
-	return QString::fromLatin1(saltByteArray);
 }
 
 // Load Create User View in the QDialog
