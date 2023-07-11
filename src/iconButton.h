@@ -19,6 +19,9 @@ private:
 public:
 	iconButton(const QIcon& icon);
 
+	// Setting Icon Size in a faster way than the usual one (QPushButton::setIconSize)
+	void setIconSize(int size);
+
 };
 
 #endif

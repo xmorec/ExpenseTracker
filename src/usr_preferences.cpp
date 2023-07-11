@@ -57,7 +57,9 @@ confWindow::confWindow(User* user) : currentUser(user)
 	// Declaring the Main Layout for the Preferences Window
 	QGridLayout* prefLayout = new QGridLayout();
 
+	//////////////////////////////////
 	// User Type
+	//////////////////////////////////
 	QGroupBox* userTypeBox = new QGroupBox("User Type");
 	QVBoxLayout* userTypeLay{ new QVBoxLayout() };
 	QLabel* userTypeLab = new QLabel(currentUser->getUserType());
@@ -67,7 +69,9 @@ confWindow::confWindow(User* user) : currentUser(user)
 	prefLayout->addWidget(userTypeBox, 0, 0);
 	fieldEdit[namePos]->setFocusPolicy(Qt::ClickFocus);
 
+	//////////////////////////////////
 	// Name Settings
+	//////////////////////////////////
 	QGroupBox* nameBox = new QGroupBox("Name");
 	QVBoxLayout* nameLay{ new QVBoxLayout() };
 	nameLay->addWidget(fieldEdit[namePos]);
@@ -88,7 +92,9 @@ confWindow::confWindow(User* user) : currentUser(user)
 
 	fieldEdit[userNamePos]->setFocusPolicy(Qt::ClickFocus);
 
+	//////////////////////////////////
 	// User Name Settings
+	//////////////////////////////////
 	QGroupBox* userNameBox = new QGroupBox("User Name");
 	QVBoxLayout* userNameLay{ new QVBoxLayout() };
 	fieldEdit[userNamePos]->setText(currentUser->getUserName());
@@ -107,7 +113,9 @@ confWindow::confWindow(User* user) : currentUser(user)
 	userNameBox->setLayout(userNameLay);
 	prefLayout->addWidget(userNameBox, 2, 0);
 
+	//////////////////////////////////
 	// Password Settings
+	//////////////////////////////////
 	QGroupBox* passBox = new QGroupBox("Password");
 	QVBoxLayout* passLay{ new QVBoxLayout() };
 	oldPassEdit->setEchoMode(QLineEdit::Password);
@@ -141,6 +149,82 @@ confWindow::confWindow(User* user) : currentUser(user)
 	passBox->setLayout(passLay);
 	prefLayout->addWidget(passBox, 3, 0);
 
+	//////////////////////////////////
+	// User Management Settings (only for Admin users)
+	//////////////////////////////////
+	QGroupBox* userManBox = new QGroupBox("User Management");
+	QVBoxLayout* userManLay{ new QVBoxLayout() };
+
+	//Load Users from DB and store them in 'users' vector
+	loadUsersFromDB();
+
+	// Number of users
+	int usersNum{ static_cast<int>(users.size()) };
+
+	// Declaring the Labels and Comboboxes for users
+	std::vector<QLabel*> userLabels{};
+	userLabels.reserve(usersNum);
+	std::vector<QComboBox*> userRoles{};
+	userRoles.reserve(usersNum);
+	std::vector<QHBoxLayout*> userHLays{};
+	userHLays.reserve(usersNum);
+
+	// Declaring the icon buttons for each users
+	QIcon rmvIcon(icons::removeIcon);
+	std::vector<iconButton*> removeButtons{};
+	removeButtons.reserve(usersNum);	
+
+	// Declaring the List for Roles that is set into each Combobox
+	QStringList rolesList{ QString::fromStdString(DB::UserType::user), QString::fromStdString(DB::UserType::admin)};
+
+	// Filling the User Management Layout
+	for (int pos = 0; pos < usersNum; ++ pos)
+	{
+		// Getting the Username and User Role (UserType)
+		userLabels.push_back(new QLabel(users[pos]->getUserName()));
+		userRoles.push_back(new QComboBox());
+		userRoles.back()->addItems(rolesList);
+		userRoles.back()->setCurrentText(users[pos]->getUserType());
+
+		// Adding removing icon button for each user
+		removeButtons.push_back(new iconButton(rmvIcon));
+		removeButtons.back()->setIconSize(19);
+
+		QObject::connect(removeButtons.back(), &QPushButton::clicked, [=]() {
+			removeUser(pos);
+			});
+
+		// Creating the Horizontal Layout for each user and filling it
+		userHLays.push_back(new QHBoxLayout());
+		userHLays.back()->addWidget(userLabels.back());
+		userHLays.back()->addWidget(userRoles.back());
+		userHLays.back()->addWidget(removeButtons.back());
+
+		// Adding the HLayout to the VLayout of User Management Settings
+		userManLay->addLayout(userHLays.back());
+	}	
+
+	QHBoxLayout* useManButtonsLay{ new QHBoxLayout() };
+	labelButton* saveManButton{ new labelButton("Save") };
+	labelButton* cancelManButton{ new labelButton("Cancel") };
+	useManButtonsLay->addWidget(saveManButton);
+	useManButtonsLay->addWidget(cancelManButton);
+	userManLay->addLayout(useManButtonsLay);
+	useManButtonsLay->setAlignment(Qt::AlignLeft);
+
+	userManBox->setLayout(userManLay);
+	prefLayout->addWidget(userManBox, 4, 0);
+
+
+	QObject::connect(saveManButton, &QPushButton::clicked, [=]() {
+		saveManagement();
+		});
+
+	QObject::connect(cancelManButton, &QPushButton::clicked, [=]() {
+		cancelManagement();
+		});
+
+	// Setting the Layout into the Dialog (usr_preferences)
 	setLayout(prefLayout);
 
 	/////////////////////////////////////////////////////////////////////
@@ -149,9 +233,35 @@ confWindow::confWindow(User* user) : currentUser(user)
 
 	// Set fixed Dialog size (user cannot resize it)
 	setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
+}
 
-	//Load Users from DB and store them in 'users' vector
-	loadUsersFromDB();
+void confWindow::removeUser(int pos)
+{
+	QMessageBox msgBox{};
+	msgBox.setWindowTitle("Deleting User");
+	msgBox.setWindowIcon(QIcon(icons::expTrackerIcon));
+	msgBox.setText("Are you sure you want to delete this user?");
+	msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);	
+	msgBox.setIcon(QMessageBox::Question);
+	int answer = msgBox.exec();
+
+	if(answer == QMessageBox::Yes)
+	{
+	
+	}
+
+}
+
+void confWindow::saveManagement()
+{
+	userInfoBox->setText("User Management has been saved!");
+	userInfoBox->setIcon(QMessageBox::Information);
+	userInfoBox->exec();
+}
+
+void confWindow::cancelManagement()
+{
+
 }
 
 void confWindow::saveField(int pos)
@@ -220,6 +330,7 @@ void confWindow::updateName()
 			{
 				userInfoBox->setText("Name could not be successfuly updated");
 				userInfoBox->setIcon(QMessageBox::Critical);
+				userInfoBox->exec();
 			}
 
 		}

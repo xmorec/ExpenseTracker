@@ -35,6 +35,7 @@ namespace icons
 	inline const QString loggingIcon { "resources/icons/logsession.png" };
 	inline const QString saveIcon{ "resources/icons/saveIcon.png" };
 	inline const QString prefIcon{ "resources/icons/preferences.png" };
+	inline const QString removeIcon{ "resources/icons/remove_user.png" };
 }
 
 
