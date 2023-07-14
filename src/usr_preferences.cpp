@@ -1,6 +1,6 @@
 ﻿#include "usr_preferences.h"
 
-
+// Constructs the main Preference Window interface and functiontality
 confWindow::confWindow(User* user) : currentUser(user)
 {
 	// Setting Window title and icon
@@ -8,7 +8,7 @@ confWindow::confWindow(User* user) : currentUser(user)
 	setWindowTitle("Preferences");
 
 	// Setting Information Window title and icon
-	userInfoBox->setWindowTitle("Processing Users Database");
+	userInfoBox->setWindowTitle("Preferences");
 	userInfoBox->setWindowIcon(QIcon(icons::expTrackerIcon));
 
 	/////////////////////////////////////////////////////////////////////
@@ -55,7 +55,7 @@ confWindow::confWindow(User* user) : currentUser(user)
 	for (QLineEdit*& lineEdit : fieldEdit) { lineEdit = new QLineEdit(); }
 
 	// Declaring the Main Layout for the Preferences Window
-	QGridLayout* prefLayout = new QGridLayout();
+	QGridLayout* prefLayout = new QGridLayout(this);
 
 	//////////////////////////////////
 	// User Type
@@ -69,15 +69,17 @@ confWindow::confWindow(User* user) : currentUser(user)
 	prefLayout->addWidget(userTypeBox, 0, 0);
 	fieldEdit[namePos]->setFocusPolicy(Qt::ClickFocus);
 
+
 	//////////////////////////////////
 	// Name Settings
-	//////////////////////////////////
-	QGroupBox* nameBox = new QGroupBox("Name");
+	//////////////////////////////////	
+	QGroupBox* nameBox = new QGroupBox("Name");	
 	QVBoxLayout* nameLay{ new QVBoxLayout() };
 	nameLay->addWidget(fieldEdit[namePos]);
 	fieldEdit[namePos]->setText(currentUser->getUserRName());
 	disableFields(true, fieldEdit[namePos]);
 
+	// Adding Buttons Edit, Save and Cancel and its layout
 	QHBoxLayout* nameButtonsLay{ new QHBoxLayout() };
 	nameButtonsLay->addWidget(editButtons[namePos]);
 	nameButtonsLay->addWidget(saveButtons[namePos]);
@@ -94,13 +96,14 @@ confWindow::confWindow(User* user) : currentUser(user)
 
 	//////////////////////////////////
 	// User Name Settings
-	//////////////////////////////////
-	QGroupBox* userNameBox = new QGroupBox("User Name");
+	//////////////////////////////////	
+	QGroupBox* userNameBox = new QGroupBox("Username");	
 	QVBoxLayout* userNameLay{ new QVBoxLayout() };
 	fieldEdit[userNamePos]->setText(currentUser->getUserName());
 	userNameLay->addWidget(fieldEdit[userNamePos]);
 	disableFields(true, fieldEdit[userNamePos]);
 
+	// Adding Buttons Edit, Save and Cancel and its layout
 	QHBoxLayout* userNameButtonsLay{ new QHBoxLayout() };
 	userNameButtonsLay->addWidget(editButtons[userNamePos]);
 	userNameButtonsLay->addWidget(saveButtons[userNamePos]);
@@ -115,8 +118,8 @@ confWindow::confWindow(User* user) : currentUser(user)
 
 	//////////////////////////////////
 	// Password Settings
-	//////////////////////////////////
-	QGroupBox* passBox = new QGroupBox("Password");
+	//////////////////////////////////	
+	QGroupBox* passBox = new QGroupBox("Password");	
 	QVBoxLayout* passLay{ new QVBoxLayout() };
 	oldPassEdit->setEchoMode(QLineEdit::Password);
 	passLay->addWidget(oldPassLab);
@@ -137,6 +140,7 @@ confWindow::confWindow(User* user) : currentUser(user)
 	repeatPassEdit->hide();
 	repeatPassLab->hide();
 
+	// Adding Buttons Edit, Save and Cancel and its layout
 	QHBoxLayout* passButtonsLay{ new QHBoxLayout() };
 	passButtonsLay->addWidget(editButtons[passPos]);
 	passButtonsLay->addWidget(saveButtons[passPos]);
@@ -151,78 +155,56 @@ confWindow::confWindow(User* user) : currentUser(user)
 
 	//////////////////////////////////
 	// User Management Settings (only for Admin users)
-	//////////////////////////////////
+	//////////////////////////////////	
+	
 	QGroupBox* userManBox = new QGroupBox("User Management");
-	QVBoxLayout* userManLay{ new QVBoxLayout() };
 
-	//Load Users from DB and store them in 'users' vector
-	loadUsersFromDB();
+	// Adding the Information Message Widget to User Management section
+	userManLay->addWidget(infoManText);	
+	infoManText->setAlignment(Qt::AlignCenter);
+	infoManText->hide();
 
-	// Number of users
-	int usersNum{ static_cast<int>(users.size()) };
-
-	// Declaring the Labels and Comboboxes for users
-	std::vector<QLabel*> userLabels{};
-	userLabels.reserve(usersNum);
-	std::vector<QComboBox*> userRoles{};
-	userRoles.reserve(usersNum);
-	std::vector<QHBoxLayout*> userHLays{};
-	userHLays.reserve(usersNum);
-
-	// Declaring the icon buttons for each users
-	QIcon rmvIcon(icons::removeIcon);
-	std::vector<iconButton*> removeButtons{};
-	removeButtons.reserve(usersNum);	
-
-	// Declaring the List for Roles that is set into each Combobox
-	QStringList rolesList{ QString::fromStdString(DB::UserType::user), QString::fromStdString(DB::UserType::admin)};
-
-	// Filling the User Management Layout
-	for (int pos = 0; pos < usersNum; ++ pos)
+	// The User Management section is filled with each user information
+	loadUserManagement();
+	
+	// Adding buttons for Saving or Canceling actions made durin User Management 
+	if (users.size() > 0) // If there are other users in Database
 	{
-		// Getting the Username and User Role (UserType)
-		userLabels.push_back(new QLabel(users[pos]->getUserName()));
-		userRoles.push_back(new QComboBox());
-		userRoles.back()->addItems(rolesList);
-		userRoles.back()->setCurrentText(users[pos]->getUserType());
+		labelButton* saveManButton{ new labelButton("Save") };
+		labelButton* cancelManButton{ new labelButton("Cancel") };
+		userManButtonsLay->addWidget(saveManButton);
+		userManButtonsLay->addWidget(cancelManButton);
+		userManLay->addLayout(userManButtonsLay);
+		userManButtonsLay->setAlignment(Qt::AlignLeft);
 
-		// Adding removing icon button for each user
-		removeButtons.push_back(new iconButton(rmvIcon));
-		removeButtons.back()->setIconSize(19);
-
-		QObject::connect(removeButtons.back(), &QPushButton::clicked, [=]() {
-			removeUser(pos);
+		// Action when pressing in the Save Button from User Management
+		QObject::connect(saveManButton, &QPushButton::clicked, [=]() {
+			saveManagement();
 			});
 
-		// Creating the Horizontal Layout for each user and filling it
-		userHLays.push_back(new QHBoxLayout());
-		userHLays.back()->addWidget(userLabels.back());
-		userHLays.back()->addWidget(userRoles.back());
-		userHLays.back()->addWidget(removeButtons.back());
-
-		// Adding the HLayout to the VLayout of User Management Settings
-		userManLay->addLayout(userHLays.back());
+		// Action when pressing in the Cancel Button from User Management
+		QObject::connect(cancelManButton, &QPushButton::clicked, [=]() {
+			restoreManContent();
+			// Setting the windows size to current size
+			QTimer::singleShot(10, [=]() {
+				setFixedHeight(sizeHint().height());
+				});
+			});
+	}
+	else // If there are no Users to show (no users in Database appart from the current one)
+	{
+		infoManText->setText("There are no other\nexisting users to show.");
+		infoManText->show();
 	}	
 
-	QHBoxLayout* useManButtonsLay{ new QHBoxLayout() };
-	labelButton* saveManButton{ new labelButton("Save") };
-	labelButton* cancelManButton{ new labelButton("Cancel") };
-	useManButtonsLay->addWidget(saveManButton);
-	useManButtonsLay->addWidget(cancelManButton);
-	userManLay->addLayout(useManButtonsLay);
-	useManButtonsLay->setAlignment(Qt::AlignLeft);
-
+	// Setting the layout for User Management
 	userManBox->setLayout(userManLay);
-	prefLayout->addWidget(userManBox, 4, 0);
 
-
-	QObject::connect(saveManButton, &QPushButton::clicked, [=]() {
-		saveManagement();
-		});
-
-	QObject::connect(cancelManButton, &QPushButton::clicked, [=]() {
-		cancelManagement();
-		});
+	// User Management is only shown to Admin users
+	if (currentUser->getUserType().toStdString() == DB::UserType::admin)
+	{
+		prefLayout->addWidget(userManBox, 4, 0);
+	}
 
 	// Setting the Layout into the Dialog (usr_preferences)
 	setLayout(prefLayout);
@@ -235,35 +217,317 @@ confWindow::confWindow(User* user) : currentUser(user)
 	setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 }
 
+// Getting the current size of the Preference Window
+void confWindow::adjustWinSize()
+{
+	winSize = size();
+}
+
+// Loading User Management content
+void confWindow::loadUserManagement()
+{
+	// Declaring the QIcon used for the icon button for removing Users
+	static const QIcon rmvIcon(icons::removeIcon);
+
+	// Clearing the widgets and layouts regarding each user for this section
+	userLabels.clear();
+	userRoles.clear();
+	userHLays.clear();
+	removeButtons.clear();
+
+	// Clearing the users that were going to be removed or modified
+	removedUsers.clear();
+	modifiedUsers.clear();
+
+	//Load Users from DB and store them in 'users' vector
+	loadUsersFromDB();
+
+	// In case there are other users in Database, no need for showing information message
+	if (users.size() > 0)
+	{
+		infoManText->hide();
+	}
+
+	// Number of users
+	int usersNum{ static_cast<int>(users.size()) };
+
+	// Reserving memory for the Labels and Comboboxes for users
+	userLabels.reserve(usersNum);
+	userRoles.reserve(usersNum);
+
+	// Reserving memory for the Horizontal Layout for each user
+	userHLays.reserve(usersNum);
+
+	// Reserving memory for icon buttons for each users	
+	removeButtons.reserve(usersNum);
+
+	// Reserving memory for vectors containing users that are going to be removed or modified
+	removedUsers.reserve(usersNum);
+	modifiedUsers.reserve(usersNum);
+
+	// Reserving memory for a vector that stores the last user role before it changes in the ComboBox 'userRoles'	
+	lastRoles.reserve(usersNum);
+
+	// Declaring the List for Roles that is set into each Combobox
+	static const QStringList rolesList{ QString::fromStdString(DB::UserType::user), QString::fromStdString(DB::UserType::admin) };
+
+	// Filling the User Management Layout
+	for (int pos = 0; pos < usersNum; ++pos)
+	{
+		// Getting the Username and User Role (UserType)
+		userLabels.push_back(new QLabel(users[pos]->getUserName()));
+		userRoles.push_back(new QComboBox());
+		userRoles.back()->addItems(rolesList);
+		userRoles.back()->setCurrentText(users[pos]->getUserType());
+		lastRoles.push_back(new QString(userRoles.back()->currentText()));
+
+		// Adding removing icon button for each user
+		removeButtons.push_back(new iconButton(rmvIcon));
+		removeButtons.back()->setIconSize(19);
+
+		// Creating the Horizontal Layout for each user and filling it
+		userHLays.push_back(new QHBoxLayout());
+		userHLays.back()->addWidget(userLabels.back());
+		userHLays.back()->addWidget(userRoles.back());
+		userHLays.back()->addWidget(removeButtons.back());
+
+		// Adding the HLayout to the VLayout of User Management Settings
+		userManLay->addLayout(userHLays.back());
+
+		// Action executed when pressing on "Remove User" Icon Button
+		QObject::connect(userRoles[pos], &QComboBox::currentTextChanged, [=]() {
+			updateRole(pos);
+			});
+
+		// Action executed when pressing on "Remove User" Icon Button
+		QObject::connect(removeButtons[pos], &QPushButton::clicked, [=]() {
+			removeUser(pos);
+			});
+	}
+}
+
+// Removing user layout from User Management section
 void confWindow::removeUser(int pos)
 {
+	// A Message Dialog Box is opened asking to delete the user
 	QMessageBox msgBox{};
 	msgBox.setWindowTitle("Deleting User");
 	msgBox.setWindowIcon(QIcon(icons::expTrackerIcon));
 	msgBox.setText("Are you sure you want to delete this user?");
-	msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);	
+	msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+	msgBox.setIcon(QMessageBox::Question);
+	int answer = msgBox.exec();	
+
+	// When Pressing "Yes" button (deleting user)
+	if (answer == QMessageBox::Yes)
+	{
+		// Deleting the layout content
+		deleteLayout(userHLays[pos]);
+
+		// A reference to the user going to be deleted is saved in the vector 'removedUsers'
+		removedUsers.push_back(pos);
+	}
+
+	// If all users - except the current one - are desired to be removed
+	if (removedUsers.size() == users.size())
+	{
+		infoManText->setText("All users are deleted.\nSave or Cancel the changes.");
+		infoManText->show();
+	}
+
+	// Updating the windows size
+	QTimer::singleShot(10, [=]() {
+		setFixedHeight(sizeHint().height());
+		});	
+}
+
+// Sets the vector containing users which are going to be updated
+void confWindow::updateRole(int pos)
+{
+	// Disabling capturing signals (ComboBox Text changed) in order to update the combobox without getting into this function again 
+	bool emitingSignalState = userRoles[pos]->blockSignals(true);
+
+	// Declaring the newRole variable as the selected role
+	QString newRole{ userRoles[pos]->currentText() };
+
+	// A Message Dialog Box is opened asking to modify the user Role
+	QMessageBox msgBox{};
+	msgBox.setWindowTitle("Changing User Role");
+	msgBox.setWindowIcon(QIcon(icons::expTrackerIcon));
+	msgBox.setText("Are you sure you want change this user role from '" + *lastRoles[pos] + "' to '" + newRole + "?");
+	msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 	msgBox.setIcon(QMessageBox::Question);
 	int answer = msgBox.exec();
 
-	if(answer == QMessageBox::Yes)
+	// When Pressing "Yes" button (changing user role)
+	if (answer == QMessageBox::Yes)
 	{
-	
+		// A reference to the user going to be modified is saved in the vector 'modifiedUsers'
+		modifiedUsers.push_back(pos);
+
+		// Update the new last role (current one)
+		*lastRoles[pos] = userRoles[pos]->currentText();
+	}
+	else if (answer == QMessageBox::No) // When Pressing "No" button (Not changing user role)
+	{
+		// Restarting the user role as it was before
+		userRoles[pos]->setCurrentText(*lastRoles[pos]);
 	}
 
+	//Restoring the blocking signal state of the signals of 'userRoles' ComboBox
+	userRoles[pos]->blockSignals(emitingSignalState);
 }
 
+// Saves the changes did in the User Management
 void confWindow::saveManagement()
 {
-	userInfoBox->setText("User Management has been saved!");
-	userInfoBox->setIcon(QMessageBox::Information);
-	userInfoBox->exec();
+	userInfoBox->setWindowTitle("Saving User Management");
+
+	// No changes were done in the user fields of User Management
+	if (removedUsers.size() == 0 && modifiedUsers.size() == 0)
+	{
+		userInfoBox->setText("There were no changes made in User Management");
+		userInfoBox->setIcon(QMessageBox::Information);
+		userInfoBox->exec();
+		return;
+	}	
+
+	sqlite3* db{};
+
+	// Checking and opening the SQLite Database
+	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers, DB::tableExpenses, DB::tableIncome }) == DB::OPEN_SUCCESS)
+	{
+
+		// Initializing a flag to check if the deleting process in DataBase was propperly conducted or not (true = correct saving, false = error occured)
+		bool deletingStatusFlag{ true };
+
+		if (removedUsers.size() > 0)
+		{
+			// Sorting the RemovedUsers vector in order to avoid making errors related to exceeding User vector size when executing the loop below
+			std::sort(removedUsers.begin(), removedUsers.end());
+
+			// Loop that removes the desired useres beginning with the last user User vector
+			for (int i = removedUsers.size() - 1; i >= 0; --i)
+			{
+				// Preparig the clause for Deleting the desired user from Database
+				std::string userName{ users.at(removedUsers[i])->getUserName().toStdString() };
+				std::string clause{ "WHERE username = '" + userName + "'" };
+
+				// If deleting User, Income and Expenses of desired User from Database was successful
+				if (deletingRecords(db, DB::tableUsers, clause) == true
+					&& deletingRecords(db, DB::tableExpenses, clause) == true
+					&& deletingRecords(db, DB::tableIncome, clause) == true)
+				{
+					// Refreshing the Deleting status Flag
+					deletingStatusFlag &= true;
+
+					// Detecting if a modified User was also removed
+					if (modifiedUsers.size() > 0)
+					{
+						auto modUserPos{ std::find(modifiedUsers.begin(), modifiedUsers.end(), removedUsers[i]) };
+
+						// If a modified user is also going to be removed, it is erased from 'modifiedUsers' vector
+						if (modUserPos != modifiedUsers.end())
+						{ 
+							modifiedUsers.erase(modUserPos);
+						}
+					}
+				}
+				else // Deleting process in Database was not successful
+				{
+					deletingStatusFlag = false;
+				}
+			}
+		}
+
+		// Initializing a flag to check if the modifying process in DataBase was propperly conducted or not (true = correct saving, false = error occured)
+		bool modifyStatusFlag{ true };
+
+		// If any user is modified
+		if (modifiedUsers.size() > 0)
+		{
+			// Loop that modifies the desired users in the database
+			for (int i = 0; i < modifiedUsers.size(); ++i)
+			{
+				// Preparig the clause for Modifiying the desired user from Database
+				std::string userName{ users.at(modifiedUsers[i])->getUserName().toStdString() };
+				std::string condition{ "username = '" + userName + "'" };
+				std::string role {userRoles[modifiedUsers[i]]->currentText().toStdString()};
+
+				// If deleting User, Income and Expenses of desired User from Database was successful				
+				//if (deletingRecords(db, DB::tableUsers, clause) == true)
+				if (updateRecords(db, DB::tableUsers, DB::col_usertype, role, condition) == true)
+				{
+					// Refreshing the Modifying status Flag
+					modifyStatusFlag &= true;
+				}
+				else // Modifying process in Database was not successful
+				{
+					modifyStatusFlag = false;
+				}
+			}
+		}
+
+		closeSQLiteDB(db);
+
+		// When deleting process in Database was successfuly done
+		if (deletingStatusFlag && modifyStatusFlag)
+		{
+			userInfoBox->setText("User Management has been saved!");
+			userInfoBox->setIcon(QMessageBox::Information);
+			userInfoBox->exec();
+
+		}
+		else // When there was an error deleting 
+		{
+			userInfoBox->setText("Deleting users could not be succesfully done");
+			userInfoBox->setIcon(QMessageBox::Critical);
+
+			userInfoBox->exec();
+		}
+
+
+		loadUsersFromDB();
+		if(users.size() == 0) // If there are no Users to show (no users in Database appart from the current one)
+		{
+			infoManText->setText("There are no other\nexisting users to show.");			
+			infoManText->show();
+
+			// The button layout is removed since no more changes could be done with no users
+			deleteLayout(userManButtonsLay);			
+			userManLay->removeItem(userManButtonsLay);
+		}
+
+	}
+
+	// Setting the default winSize to the current size
+	QTimer::singleShot(50, [=]() {
+		winSize = size();
+		});	
 }
 
-void confWindow::cancelManagement()
+// Restores the the content according database
+void confWindow::restoreManContent()
 {
 
+	// The current horizontal layouts for all users are removed
+	for (QHBoxLayout*& hlay : userHLays)
+	{
+		deleteLayout(hlay);
+	}
+
+	// The button layout is removed in order to put it in the proper place in the User Management Layout
+	userManLay->removeItem(userManButtonsLay);
+
+	// Data from Database is read and loaded again to the User Management field
+	loadUserManagement();
+
+	// Button layout is added again to the User Management Layout, just below the users layout
+	userManLay->addLayout(userManButtonsLay);
+
 }
 
+// Handles the saving action for a specific field (pos)
 void confWindow::saveField(int pos)
 {
 	switch (pos)
@@ -277,6 +541,30 @@ void confWindow::saveField(int pos)
 	case passPos:
 		updatePassword();
 		break;
+	}
+}
+
+// Clears all content from a specific layout
+void confWindow::deleteLayout(QHBoxLayout*& layout)
+{
+	// Check if layout exists
+	if (layout != nullptr)
+	{
+		// Delete all widgets from the layout
+		while (QLayoutItem* item = layout->takeAt(0))
+		{
+			if (QWidget* widget = item->widget())
+			{
+				delete widget;
+			}
+			delete item;
+		}
+
+		// Free memory
+		delete layout;
+
+		// Set the layout pointer to nullptr
+		layout = nullptr;
 	}
 }
 
@@ -569,6 +857,9 @@ void confWindow::disableFields(bool disable, QLineEdit* fieldEdit)
 //Load Users from DB and store them in 'users' vector
 void confWindow::loadUsersFromDB()
 {
+	// Clearing Users vector in order to get better results
+	users.clear();
+
 	sqlite3* db{};
 
 	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
@@ -605,23 +896,29 @@ void confWindow::loadUsersFromDB()
 
 }
 
+// Reset the content shown in the Preferences Dialog Window to default
 void confWindow::restartContents()
 {
+	// Setting the Edit fields according default settings
 	fieldEdit[namePos]->setText(currentUser->getUserRName());
 	fieldEdit[userNamePos]->setText(currentUser->getUserName());
 	fieldEdit[passPos]->setText("XXXXXXXX");
 
+	// Setting the layout to "Password:"
 	passLab->setText("Password:");
 
+	// Hiding the Old Password and Repeat Password fields
 	oldPassEdit->hide();
 	oldPassLab->hide();
 
 	repeatPassLab->hide();
 	repeatPassEdit->hide();
 
+	// Setting the Edit fields of Old Password and Repeat Password empty
 	oldPassEdit->setText("");
 	repeatPassEdit->setText("");
 
+	// Showing/Hiding buttons according default settings
 	for (int pos = 0; pos < numEditBoxes; ++pos)
 	{
 		editButtons[pos]->show();
@@ -630,6 +927,10 @@ void confWindow::restartContents()
 		disableFields(true, fieldEdit[pos]);
 	}
 
+	// Restore content shown in the User Management section
+	restoreManContent();
+
+	// Set the fixed windows size
 	setFixedSize(winSize);
 }
 
@@ -638,9 +939,7 @@ confWindow::~confWindow()
 	// Free 'User' memory from users vector pointers
 	for (User* user : users)
 	{
-		//if (user != *userIt)
 		delete user;
-		qDebug() << "\nDeleting user: " << user->getUserName() << "\n";
 	}
 
 }

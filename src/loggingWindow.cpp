@@ -4,7 +4,7 @@
 loggingWindow::loggingWindow() : QDialog()
 {
 	setWindowIcon(QIcon(icons::expTrackerIcon));
-	setWindowTitle("Sign In");
+	setWindowTitle("Expense Tracker");
 
 	userInfoBox->setWindowIcon(QIcon(icons::loggingIcon));
 
@@ -20,6 +20,14 @@ loggingWindow::loggingWindow() : QDialog()
 
 	// Filling Dialog Content (Labels, User/Password Fields, Buttons)
 	vLay->addWidget(titlePopup, 0, Qt::AlignCenter);
+
+	// Adding the Logging Image
+	QLabel* imageLabel = new QLabel();
+	QPixmap image(icons::loggingIcon2);
+	imageLabel->setPixmap(image.scaled(QSize(100, 100)));
+	vLay->addWidget(imageLabel, 0, Qt::AlignCenter);
+
+	// Adding Filed Edits and Labels regarding User Credentials
 	vLay->addWidget(userLabel);
 	vLay->addWidget(userEdit);
 	vLay->addWidget(passLabel);
@@ -83,13 +91,15 @@ void loggingWindow::loadUsersFromDB()
 			// Tries to insert the new admin to DB and also adds it to the 'users' vector
 			if (insertUserToDB(db, "admin"))
 			{
-				//Show infoBox
-				userInfoBox->setWindowTitle("Admin Creation");
+				//Show infoBox	
+				userInfoBox->setWindowIcon(QIcon(icons::expTrackerIcon));
+				userInfoBox->setWindowTitle("Expense Tracker");
 				userInfoBox->setIcon(QMessageBox::Information);
 				userInfoBox->setText("Admin User is created\nUser: \"admin\"\nPass: \"admin\"");
 			}
 			else
 			{
+				userInfoBox->setWindowIcon(QIcon(icons::expTrackerIcon));
 				userInfoBox->setIcon(QMessageBox::Warning);
 				userInfoBox->setText("An admin should be created but it was not possible.\nRestart the application");
 			}			
@@ -280,7 +290,6 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 void loggingWindow::loadCreateUserView()
 {
 	// Giving the proper widget apperance to the view
-	setWindowTitle("Create User");
 	titlePopup->setText("Create User");
 	passLabel->setText("Set Password");
 	userLabel->setText("Set Username");
@@ -302,7 +311,6 @@ void loggingWindow::loadCreateUserView()
 void loggingWindow::loadLoggingView()
 {
 	// Giving the proper widget apperance to the view
-	setWindowTitle("Sign In");
 	titlePopup->setText("Sign In");
 	passLabel->setText("Password");
 	userLabel->setText("User");

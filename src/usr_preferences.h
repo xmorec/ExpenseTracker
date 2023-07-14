@@ -10,12 +10,12 @@
 #include <QMessageBox>
 #include <QGroupBox>
 #include <QComboBox>
+#include <QTimer>
 #include "User.h"
 #include "constants.h"
 #include "labelButton.h"
 #include "sql_functions.h"
 #include "iconButton.h"
-
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -37,7 +37,7 @@ private:
 
 	// Informing QMessageBox
 	QMessageBox* userInfoBox = new QMessageBox();
-		
+	
 	// Indexes used to point to fields related to some User parameters (Name, Username, Password, ...)
 	static constexpr int namePos{ 0 };
 	static constexpr int userNamePos{ 1 };
@@ -59,12 +59,37 @@ private:
 	std::vector<labelButton*> saveButtons{};	
 	std::vector<labelButton*> cancelButtons{};
 
+	/*
+	User Management Widgets, Layouts and User Vectors
+	*/
+	// Layouts for user management and buttons
+	QVBoxLayout* userManLay{ new QVBoxLayout() };
+	std::vector<QHBoxLayout*> userHLays{};
+	QHBoxLayout* userManButtonsLay{ new QHBoxLayout() };
+
+	// Vectors for Labels, Comboboxes and Remove Icon buttons for User Management
+	std::vector<QLabel*> userLabels{};	
+	std::vector<QComboBox*> userRoles{};	
+	std::vector<QString*> lastRoles {};
+	std::vector<iconButton*> removeButtons{};
+
+	// Vector storing Users going to be removed
+	std::vector<int> removedUsers{};
+
+	// Vector storing Users whose properties are going to be changed
+	std::vector<int> modifiedUsers{};
+
+	// Information text in Management User section
+	QLabel* infoManText{ new QLabel() };
+
+	// Windows Size value
+	QSize winSize{};
 
 public:
 
-	QSize winSize{};
-
 	confWindow(User* user);
+
+	void adjustWinSize();
 
 	void saveField(int pos);
 
@@ -85,9 +110,16 @@ public:
 
 	void removeUser(int pos);
 
+	void loadUserManagement();
+
+	void updateRole(int pos);
+
+	// Clears all content from a specific layout
+	void deleteLayout(QHBoxLayout*& layout);
+
 	void saveManagement();
 
-	void cancelManagement();
+	void restoreManContent();
 
 	void restartContents();
 

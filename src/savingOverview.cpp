@@ -105,6 +105,7 @@ void savingOverview::fillExpensesTable()
     for (int row{ 0 }; row < expenses.size(); ++row)
     {
         rmvButtonsVect[row] = new QPushButton("Remove");
+        //rmvButtonsVect[row] = new iconButton(rmvIcon);
         expensesTable->setCellWidget(row, expensesHeaders.length() - 1, rmvButtonsVect[row]);
         QObject::connect(rmvButtonsVect[row], &QPushButton::clicked, [=]() {
             removeExpense(row);
@@ -612,7 +613,8 @@ void savingOverview::addExpense()
     copyExpenseToRow(newExpensePos, false);
 
     // Adding a new Remove Button pointer to the "Remove buttons vector"
-    rmvButtonsVect.push_back(new QPushButton("Remove"));
+    rmvButtonsVect.push_back(new QPushButton("Remove"));    
+    //rmvButtonsVect.push_back(new iconButton(rmvIcon)); 
 
     // Updating the internal 'iteratorVect' useful to remove properly the table rows and expenses
     int rmvSize = rmvButtonsVect.size();
@@ -635,8 +637,6 @@ void savingOverview::saveDataToDB()
     // This function stores the table data values (Saving and Expenses Tables) to Database.
     // To do it, first the Expenses and Income data from Database is removed. Afterwards, the data from tables is inserted to the Database.
 
-    sqlite3* db{};
-
     // This msgBox will inform the saving status
     userInfoBox->setWindowTitle("Saving Expenses");
     userInfoBox->setWindowIcon(QIcon(icons::saveIcon));
@@ -649,6 +649,8 @@ void savingOverview::saveDataToDB()
         userInfoBox->exec();
         return;
     }
+
+    sqlite3* db{};
 
     // Checking and opening the SQLite Database
     if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableExpenses, DB::tableIncome }) == DB::OPEN_SUCCESS)

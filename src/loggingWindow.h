@@ -37,7 +37,7 @@ private:
 
 	QLabel* titlePopup{ new QLabel("Sign In") };
 	QLabel* passLabel{ new QLabel("Password") };
-	QLabel* userLabel{ new QLabel("User") };
+	QLabel* userLabel{ new QLabel("Username") };
 	QVBoxLayout* vLay{ new QVBoxLayout() };
 
 	QPushButton* signInButton{ new QPushButton("LOGIN") };

@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QTimer>
 #include <fstream>
+#include "iconButton.h"
 #include "constants.h"
 #include "sql_functions.h"
 #include "User.h"
@@ -61,6 +62,8 @@ private:
     QPushButton* saveButton{ new QPushButton("Save") };
     QPushButton* cancelButton{ new QPushButton("Restore") };
     std::vector<QPushButton*> rmvButtonsVect{}; // Vector of "Remove Buttons"
+    //std::vector<iconButton*> rmvButtonsVect{}; // Vector of "Remove Buttons"
+    const QIcon rmvIcon { QIcon(icons::removeExpense) };
 
     ////////// ---------- Savings Table Parameters --------- //////////////////////////////
     // Horizontal Header Table Titles:

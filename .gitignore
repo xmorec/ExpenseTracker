@@ -6,6 +6,7 @@
 
 #excluding files for deleting and showing Database tables
 /resources/database/susers.txt
+/resources/database/susers2.txt
 /resources/database/dusers.txt
 /resources/database/sexpenses.txt
 /resources/database/dexpenses.txt
