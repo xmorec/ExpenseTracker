@@ -6,6 +6,7 @@ tableEdit::tableEdit(int rows, int columns) : QTableWidget(rows, columns)
     // Vertical Headers are hidden
     verticalHeader()->hide();
 
+    // Avoid showing how the cell is selected
     //setEditTriggers(QAbstractItemView::DoubleClicked);
     setSelectionMode(QAbstractItemView::NoSelection);
 

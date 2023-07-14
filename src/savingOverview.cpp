@@ -6,7 +6,7 @@ savingOverview::savingOverview(User* loggedUser) : QHBoxLayout()
     ////////////////////////////////////////////////////////////////////////////////////////
     ////////// ---------- Overview Expenses Table  ---------////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////
-
+    
     // Setting the current User as the logged User
     currentUser = loggedUser;
 
@@ -78,6 +78,9 @@ void savingOverview::fillExpensesTable()
     expensesTable->setRowCount(expensesNumber);
     expensesTable->setColumnCount(expensesHeaders.length());
 
+    // Adapting the Column for removing expenses to the Remove Icon Width
+    auto indexRmvButton{ expensesHeaders.indexOf(rmvButtonHeader) };
+    expensesTable->setColumnWidth(indexRmvButton, rmvIconSz + 3);
 
     // Setting the header names of this Table
     expensesTable->setHorizontalHeaderLabels(expensesHeaders);
@@ -104,8 +107,10 @@ void savingOverview::fillExpensesTable()
     rmvButtonsVect.resize(expensesNumber);
     for (int row{ 0 }; row < expenses.size(); ++row)
     {
-        rmvButtonsVect[row] = new QPushButton("Remove");
-        //rmvButtonsVect[row] = new iconButton(rmvIcon);
+        rmvButtonsVect[row] = new iconButton(rmvIcon);
+        rmvButtonsVect[row]->setIconSize(rmvIconSz);
+        rmvButtonsVect[row]->setToolTip("Remove expense");
+
         expensesTable->setCellWidget(row, expensesHeaders.length() - 1, rmvButtonsVect[row]);
         QObject::connect(rmvButtonsVect[row], &QPushButton::clicked, [=]() {
             removeExpense(row);
@@ -613,8 +618,9 @@ void savingOverview::addExpense()
     copyExpenseToRow(newExpensePos, false);
 
     // Adding a new Remove Button pointer to the "Remove buttons vector"
-    rmvButtonsVect.push_back(new QPushButton("Remove"));    
-    //rmvButtonsVect.push_back(new iconButton(rmvIcon)); 
+    rmvButtonsVect.push_back(new iconButton(rmvIcon)); 
+    rmvButtonsVect.back()->setIconSize(rmvIconSz);
+    rmvButtonsVect.back()->setToolTip("Remove expense");
 
     // Updating the internal 'iteratorVect' useful to remove properly the table rows and expenses
     int rmvSize = rmvButtonsVect.size();

@@ -3,13 +3,14 @@
 
 mainWindow::mainWindow(User* currentUser)
 {
+
+    // Set fixed Window size (user cannot resize it)
+    setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
+
     // Setting the Window Title and Icon
     setWindowIcon(QIcon(icons::expTrackerIcon));
     setWindowTitle("Expense Tracker - " + currentUser->getUserName());
-
-    // Setting Fixed Window size (user cannot resize it) 
-    setMaximumWidth(size().width());
-
+ 
     // Declaring the central Widget of the QMainWindow
     QWidget* centralWidget = new QWidget();
 
@@ -23,6 +24,7 @@ mainWindow::mainWindow(User* currentUser)
     // Add a clickable Icon related to the Preferences
     QIcon prefIcon(icons::prefIcon);  
     iconButton* iconButt = new iconButton(prefIcon);
+    iconButt->setToolTip("Open Preferences menu");
     mainVLayout->addWidget(iconButt,0,Qt::AlignTop);
 
     // Declaring and Initializing the Preferences Window

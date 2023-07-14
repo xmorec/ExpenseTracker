@@ -42,7 +42,8 @@ private:
     inline static const QString amountHeader{ "Amount" };
     inline static const QString frequencyHeader{ "Frequency" };
     inline static const QString totalAmountHeader{ "Total Amount" };
-    
+    inline static const QString rmvButtonHeader{ "" };
+
     // Horizontal Header Table Titles (QStringList):
     inline static const QStringList expensesHeaders
     {{
@@ -50,7 +51,7 @@ private:
         amountHeader,
         frequencyHeader,
         totalAmountHeader,
-        ""
+        rmvButtonHeader
     }};
 
     tableEdit* expensesTable{ nullptr }; // Expenses Table pointer
@@ -61,8 +62,8 @@ private:
     QPushButton* addExpenseButton{ new QPushButton("Add") };
     QPushButton* saveButton{ new QPushButton("Save") };
     QPushButton* cancelButton{ new QPushButton("Restore") };
-    std::vector<QPushButton*> rmvButtonsVect{}; // Vector of "Remove Buttons"
-    //std::vector<iconButton*> rmvButtonsVect{}; // Vector of "Remove Buttons"
+    std::vector<iconButton*> rmvButtonsVect{}; // Vector of "Remove Buttons"
+    int rmvIconSz{ 18 }; // Remove Icon Size
     const QIcon rmvIcon { QIcon(icons::removeExpense) };
 
     ////////// ---------- Savings Table Parameters --------- //////////////////////////////

@@ -283,6 +283,7 @@ void confWindow::loadUserManagement()
 
 		// Adding removing icon button for each user
 		removeButtons.push_back(new iconButton(rmvIcon));
+		removeButtons.back()->setToolTip("Remove user");
 		removeButtons.back()->setIconSize(19);
 
 		// Creating the Horizontal Layout for each user and filling it
@@ -454,17 +455,8 @@ void confWindow::saveManagement()
 				std::string condition{ "username = '" + userName + "'" };
 				std::string role {userRoles[modifiedUsers[i]]->currentText().toStdString()};
 
-				// If deleting User, Income and Expenses of desired User from Database was successful				
-				//if (deletingRecords(db, DB::tableUsers, clause) == true)
-				if (updateRecords(db, DB::tableUsers, DB::col_usertype, role, condition) == true)
-				{
-					// Refreshing the Modifying status Flag
-					modifyStatusFlag &= true;
-				}
-				else // Modifying process in Database was not successful
-				{
-					modifyStatusFlag = false;
-				}
+				// modifying Status Flag is updated according the result of the updating Database process
+				modifyStatusFlag &= updateRecords(db, DB::tableUsers, DB::col_usertype, role, condition);
 			}
 		}
 
@@ -486,7 +478,7 @@ void confWindow::saveManagement()
 			userInfoBox->exec();
 		}
 
-
+		// Updating the Users vector with the users from Database
 		loadUsersFromDB();
 		if(users.size() == 0) // If there are no Users to show (no users in Database appart from the current one)
 		{
@@ -509,7 +501,6 @@ void confWindow::saveManagement()
 // Restores the the content according database
 void confWindow::restoreManContent()
 {
-
 	// The current horizontal layouts for all users are removed
 	for (QHBoxLayout*& hlay : userHLays)
 	{
@@ -524,10 +515,9 @@ void confWindow::restoreManContent()
 
 	// Button layout is added again to the User Management Layout, just below the users layout
 	userManLay->addLayout(userManButtonsLay);
-
 }
 
-// Handles the saving action for a specific field (pos)
+// Updates a user parameter according the "save button" pressed for a specific field (pos)
 void confWindow::saveField(int pos)
 {
 	switch (pos)
@@ -568,6 +558,7 @@ void confWindow::deleteLayout(QHBoxLayout*& layout)
 	}
 }
 
+// Checks the new name of the current User and updates it in the Database
 void confWindow::updateName()
 {
 	userInfoBox->setWindowTitle("Name modification");
@@ -620,12 +611,11 @@ void confWindow::updateName()
 				userInfoBox->setIcon(QMessageBox::Critical);
 				userInfoBox->exec();
 			}
-
 		}
 	}
-
 }
 
+// Checks the new Username of the current User and updates it in the Database
 void confWindow::updateUserName()
 {
 	userInfoBox->setWindowTitle("Username modification");
@@ -677,16 +667,17 @@ void confWindow::updateUserName()
 	}
 }
 
+// Checks and updates the password user into database
 void confWindow::updatePassword()
 {
-
 	userInfoBox->setWindowTitle("Password modification");
 
-	// Get the input username
+	// Gets the password from password fields
 	QString oldPass { oldPassEdit->text() };
 	QString newPass { fieldEdit[passPos]->text() };
 	QString repPass { repeatPassEdit->text() };
 	
+	// Gets the user Salt and HashPassword
 	QString userSalt{ currentUser->getSalt() };
 	QString userPass{ currentUser->getHashPassword() };
 
@@ -724,13 +715,16 @@ void confWindow::updatePassword()
 
 		QString hashPass{ hashPassword(newPass, userSalt) };		
 
+		// Sets the values that are going to be used to SQL Query
 		std::string hashPassDB{ hashPass.toUtf8().toStdString() };
 		std::string condition{ "username = '" + currentUser->getUserName().toStdString() + "'" };		
-
 		std::string userName{ currentUser->getUserName().toStdString() };
+
+		// Sets a flag with the result (true/false) of updating data in database with new Password
 		bool hpassFlag{ updateRecords(db, DB::tableUsers, DB::col_hashpass, hashPassDB, DB::col_username + " = '" + userName + "'") };
 		bool saltFlag{ true };		
 
+		//'it' and 'maxTries' are used to assure a proper hash password to Database is generated
 		int it{ 0 };
 		int maxTries{ 7 };
 
@@ -749,6 +743,7 @@ void confWindow::updatePassword()
 			hashPassDB = hashPass.toUtf8().toStdString();
 			condition =  "username = '" + currentUser->getUserName().toStdString() + "'";
 
+			// New Hash Password and Salt are inserted to Database
 			hpassFlag = updateRecords(db, DB::tableUsers, DB::col_hashpass, hashPassDB, DB::col_username + " = '" + userName + "'");
 			saltFlag = updateRecords(db, DB::tableUsers, DB::col_salt, userSalt.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
 
@@ -764,6 +759,7 @@ void confWindow::updatePassword()
 			currentUser->setHashPasswordDB(hashPass.toUtf8());
 			currentUser->setSaltDB(userSalt.toUtf8());
 
+			// The password section view of Prefences window is reset
 			cancelField(passPos);
 			saveButtons[passPos]->setDefault(false); // Save button is not pressed by default when clicking Enter
 
@@ -772,8 +768,9 @@ void confWindow::updatePassword()
 			userInfoBox->exec();
 
 		}
-		else
+		else //When updating User Password and Salt to the DB was not successful
 		{
+			// Previous values of HashPassword and Salt are inserted again to the Database
 			updateRecords(db, DB::tableUsers, DB::col_hashpass, userPass.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
 			updateRecords(db, DB::tableUsers, DB::col_salt, userSalt.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
 
@@ -783,13 +780,16 @@ void confWindow::updatePassword()
 		}
 
 		closeSQLiteDB(db);
-	}
-	
+	}	
 }
 
+// Show or hide elements of Preferences window according the "Edit" button pressed
 void confWindow::editField(int pos)
 {
+	// Edit Fields are enabled
 	disableFields(false, fieldEdit[pos]);
+
+	// Showing / Hiding buttons
 	editButtons[pos]->hide();
 	saveButtons[pos]->show();
 	cancelButtons[pos]->show();
@@ -797,6 +797,7 @@ void confWindow::editField(int pos)
 	// When pressing Enter, 'Save Button' acts as clicked
 	saveButtons[pos]->setDefault(true);
 
+	// When Password "Edit" button is pressed
 	if (pos == passPos)
 	{
 		oldPassEdit->show();
@@ -808,17 +809,23 @@ void confWindow::editField(int pos)
 		passLab->setText("New Password:");
 		fieldEdit[passPos]->setText("");
 
+		// Assures the windows has a propper size
 		setFixedHeight(sizeHint().height());
 	}
 }
 
+// Show or hide elements of Preferences window according the "Cancel" button pressed
 void confWindow::cancelField(int pos)
 {
+	// Edit Fields are disabled
 	disableFields(true, fieldEdit[pos]);
+
+	// Showing / Hiding buttons
 	editButtons[pos]->show();
 	saveButtons[pos]->hide();
 	cancelButtons[pos]->hide();
 
+	// The values in the Edit fields are restored
 	if (pos == namePos)
 	{
 		fieldEdit[pos]->setText(currentUser->getUserRName());
@@ -843,14 +850,18 @@ void confWindow::cancelField(int pos)
 		passLab->setText("Password:");
 		fieldEdit[pos]->setText("XXXXXXXX");
 
+		// Assures the windows has a propper size
 		setFixedSize(winSize);
 	}
-
 }
 
+// Disables / Enables the input field (fieldEdit) according a flag (bool disable)
 void confWindow::disableFields(bool disable, QLineEdit* fieldEdit)
 {
+	// Makes the Edit Field only readable (writting it is not allowed)
 	fieldEdit->setReadOnly(disable);
+
+	// Sets the color of the Field according if it is disabled or enabled
 	fieldEdit->setStyleSheet(disable ? fieldColor::disable : fieldColor::enable);
 }
 
@@ -862,18 +873,21 @@ void confWindow::loadUsersFromDB()
 
 	sqlite3* db{};
 
+	// Checks and Open the Database
 	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
 	{
 		//records gets the output of the SELECT query given by 'getRecords()'
 		std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, user_type") };
 
-		// Load the database users to the Users vector 'users'
+		// Load the database users to the Users vector 'users' in case they exist in Database
 		if (!records.empty())
 		{
+			// For every record, a user is read and stored in the Users vector (except from the current User)
 			for (const QStringList& record : records)
 			{
-				if (!(record[0] == currentUser->getUserName()))
+				if (!(record[0] == currentUser->getUserName())) // No current user
 				{
+					// Creating a new User and setting their parameters from the records of Database
 					User* userDB{ new User(record[0]) };
 					userDB->setUserRName(record[1]);
 					userDB->setSalt(record[2]);
@@ -881,11 +895,13 @@ void confWindow::loadUsersFromDB()
 					userDB->setSaltDB(record[2].toUtf8());
 					userDB->setHashPasswordDB(record[3].toUtf8());
 					userDB->setUserType(record[4]);
+
+					// Inserting the new User to the Users vector
 					users.push_back(userDB);
 				}
 			}
 		}
-		else
+		else // When there are no users in Database (even not the current user)
 		{
 			userInfoBox->setIcon(QMessageBox::Warning);
 			userInfoBox->setText("There are no users in Database");
@@ -934,6 +950,7 @@ void confWindow::restartContents()
 	setFixedSize(winSize);
 }
 
+// Destructor
 confWindow::~confWindow()
 {
 	// Free 'User' memory from users vector pointers

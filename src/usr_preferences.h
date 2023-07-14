@@ -29,6 +29,9 @@ class confWindow : public QDialog
 
 private:
 
+	// Windows Size value
+	QSize winSize{};
+
 	// Current Logged User
 	User* currentUser{};
 
@@ -82,47 +85,60 @@ private:
 	// Information text in Management User section
 	QLabel* infoManText{ new QLabel() };
 
-	// Windows Size value
-	QSize winSize{};
-
 public:
 
+	// Constructs the main Preference Window interface and functiontality
 	confWindow(User* user);
 
+	// Getting the current size of the Preference Window
 	void adjustWinSize();
 
+	// Updates a user parameter according the "save button" pressed for a specific field (pos)
 	void saveField(int pos);
 
+	// Checks the new name of the current User and updates it in the Database
 	void updateName();
 
+	// Checks the new Username of the current User and updates it in the Database
 	void updateUserName();
 
+	// Checks and updates the password user into database
 	void updatePassword();
 
+	// Show or hide elements of Preferences window according the "Edit" button pressed
 	void editField(int pos);
 
+	// Show or hide elements of Preferences window according the "Cancel" button pressed
 	void cancelField(int pos);
 
+	// Disables / Enables the input field (fieldEdit) according a flag (bool disable)
 	void disableFields(bool disable, QLineEdit* fieldEdit);
 
-	//Load Users from DB and store them in 'users' vector
+	//Load Users from DB and store them in 'users' vector	
 	void loadUsersFromDB();
 
+	// Removing user layout from User Management section
 	void removeUser(int pos);
 
+	// Loading User Management content
 	void loadUserManagement();
 
+	// Sets the vector containing users which are going to be updated
 	void updateRole(int pos);
 
 	// Clears all content from a specific layout
 	void deleteLayout(QHBoxLayout*& layout);
 
+	// Saves the changes did in the User Management
 	void saveManagement();
 
+	// Restores the the content according database
 	void restoreManContent();
 
+	// Reset the content shown in the Preferences Dialog Window to default
 	void restartContents();
 
+	// Destructor
 	~confWindow();
 
 	signals:
