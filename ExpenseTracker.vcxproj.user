@@ -9,6 +9,6 @@ $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <QtLastBackgroundBuild>2023-07-14T10:49:33.6417837Z</QtLastBackgroundBuild>
   </PropertyGroup>
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <QtLastBackgroundBuild>2023-07-14T10:49:33.9336167Z</QtLastBackgroundBuild>
+    <QtLastBackgroundBuild>2023-07-18T10:03:05.6274769Z</QtLastBackgroundBuild>
   </PropertyGroup>
 </Project>

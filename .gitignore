@@ -3,6 +3,7 @@
 
 #excluding folder x64 created from Visual Studio (compiling folder)
 /x64/Debug
+/x64/Release
 
 #excluding files for deleting and showing Database tables
 /resources/database/susers.txt

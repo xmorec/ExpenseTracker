@@ -1,2 +1,2 @@
 CONFIG += no_fixpath
-QT +=
+QT += core gui widgets sql

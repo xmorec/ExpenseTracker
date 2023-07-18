@@ -1,11 +1,11 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-<Qt_DEFINES_>_WINDOWS;UNICODE;_UNICODE;WIN32;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;NDEBUG;QT_NO_DEBUG;QT_GUI_LIB;QT_CORE_LIB</Qt_DEFINES_>
-<Qt_INCLUDEPATH_>C:\Users\Xavi\AppData\Local\Temp\xwi4okyx.h1z;C:\Qt\6.5.0\msvc2019_64\include;C:\Qt\6.5.0\msvc2019_64\include\QtGui;C:\Qt\6.5.0\msvc2019_64\include\QtCore;C:\Users\Xavi\AppData\Local\Temp\xwi4okyx.h1z;/include;C:\Qt\6.5.0\msvc2019_64\mkspecs\win32-msvc</Qt_INCLUDEPATH_>
+<Qt_DEFINES_>_WINDOWS;UNICODE;_UNICODE;WIN32;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;NDEBUG;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_SQL_LIB;QT_CORE_LIB</Qt_DEFINES_>
+<Qt_INCLUDEPATH_>C:\Users\Xavi\AppData\Local\Temp\oeqejrzi.2ey;C:\Qt\6.5.0\msvc2019_64\include;C:\Qt\6.5.0\msvc2019_64\include\QtWidgets;C:\Qt\6.5.0\msvc2019_64\include\QtGui;C:\Qt\6.5.0\msvc2019_64\include\QtSql;C:\Qt\6.5.0\msvc2019_64\include\QtCore;C:\Users\Xavi\AppData\Local\Temp\oeqejrzi.2ey;/include;C:\Qt\6.5.0\msvc2019_64\mkspecs\win32-msvc</Qt_INCLUDEPATH_>
 <Qt_STDCPP_>stdcpp17</Qt_STDCPP_>
 <Qt_RUNTIME_>MultiThreadedDLL</Qt_RUNTIME_>
 <Qt_CL_OPTIONS_>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -permissive- -Zc:__cplusplus -Zc:externConstexpr -utf-8</Qt_CL_OPTIONS_>
-<Qt_LIBS_>C:\Qt\6.5.0\msvc2019_64\lib\Qt6Gui.lib;C:\Qt\6.5.0\msvc2019_64\lib\Qt6Core.lib;C:\Qt\6.5.0\msvc2019_64\lib\Qt6EntryPoint.lib;shell32.lib</Qt_LIBS_>
+<Qt_LIBS_>C:\Qt\6.5.0\msvc2019_64\lib\Qt6Widgets.lib;C:\Qt\6.5.0\msvc2019_64\lib\Qt6Gui.lib;C:\Qt\6.5.0\msvc2019_64\lib\Qt6Sql.lib;C:\Qt\6.5.0\msvc2019_64\lib\Qt6Core.lib;C:\Qt\6.5.0\msvc2019_64\lib\Qt6EntryPoint.lib;shell32.lib</Qt_LIBS_>
 <Qt_LINK_OPTIONS_>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'"</Qt_LINK_OPTIONS_>
 <QMake_QT_SYSROOT_></QMake_QT_SYSROOT_>
 <QMake_QT_INSTALL_PREFIX_>C:/Qt/6.5.0/msvc2019_64</QMake_QT_INSTALL_PREFIX_>
@@ -37,7 +37,7 @@
     <QtBkup_QtInstall
       >6.5.0_msvc2019_64</QtBkup_QtInstall>
     <QtBkup_QtModules
-      ></QtBkup_QtModules>
+      >core;gui;widgets;sql</QtBkup_QtModules>
     <QtBkup_QtPathBinaries
       >bin</QtBkup_QtPathBinaries>
     <QtBkup_QtPathLibraryExecutables
