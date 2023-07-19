@@ -30,8 +30,9 @@ private:
     // Logged User
     User* currentUser{nullptr};
     
-    inline static const QString moneyUnit{ "€" };
-    bool wrongCellFlag{ false };
+    inline static const QString moneyUnit{ "€" };    
+    std::vector<bool> wrongCellFlagE{}; // Flags regarding the cell format of expenses
+    bool wrongCellFlagI{}; // Flag regarding the cell format of Income
 
     // Informing QMessageBox
     QMessageBox* userInfoBox = new QMessageBox();

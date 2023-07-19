@@ -97,6 +97,12 @@ void savingOverview::fillExpensesTable()
         updateTableValues(row, col, expensesTable);
         });
 
+    // Initializing wrongCellFlag with "false" values for Expenses (this flag is 'true' when the cell text format is incorrect or 'false' if it is correct)
+    wrongCellFlagE.clear();
+    wrongCellFlagE.reserve(expensesNumber + 25);
+    wrongCellFlagE.resize(expensesNumber);
+    for (int i = 0; i < expensesNumber; ++i) { wrongCellFlagE[i] = false; }
+
     // The initialization of 'iteratorVect' is useful to get a proper removing of the expenses when a "Remove Button" is clicked on.
     iteratorVect.reserve(expensesNumber + 25);
     iteratorVect.resize(expensesNumber);
@@ -152,6 +158,9 @@ void savingOverview::fillSavingTable()
     auto savingsItem = new QTableWidgetItem(QString::number(savings) + " " + moneyUnit);
     savingsItem->setFlags(savingsItem->flags() & ~Qt::ItemIsEditable & ~Qt::ItemIsSelectable);
     savingTable->setItem(0, indexSavings, savingsItem);
+
+    // Initializing wrongCellFlag with "false" value for Income (this flag is 'true' when the cell text format is incorrect or 'false' if it is correct)
+    wrongCellFlagI = false;
 
     // Making the table updatable if the income is modified        
     QObject::connect(savingTable, &QTableWidget::cellChanged, [=](int row, int col) {
@@ -408,7 +417,6 @@ void savingOverview::updateTableValues(int row, int col, tableEdit* inputTable)
             auto freqItem{ expensesTable->item(row, colFrequency) };
 
             // Getting the new double Total Amount value (amount * frequency)
-            //double newAmountDouble{ expenses[row][col].toDouble() };
             double newTotalAmountDouble{ newAmountDouble * freqItem->text().toDouble() };
 
             // Setting the new double Total Amount value to the Table:
@@ -501,7 +509,7 @@ double savingOverview::setCellAccordingToTextFormat(int row, int col, tableEdit*
 {
     // This function checks the text format of the cell [row, col] from the table 'inputTable'. 
     // If this text format is not OK the cell will be background painted and return value will be set to 0.0
-    // If text format is OK the cell will be backgroung painted as a cell with correct format. In this case, the return value is the cell double value.
+    // If text format is OK the cell will be background painted as a cell with correct format. In this case, the return value is the double value of the cell.
     // The function considers to add into the cell the symbol of 'moneyUnit' depending an input flag 'moneyUnitFlag'
 
     // Getting the item (row,col) from inputTable
@@ -514,7 +522,7 @@ double savingOverview::setCellAccordingToTextFormat(int row, int col, tableEdit*
         editedItemText.remove(moneyUnit);
     }
 
-    // 'isDoubleVal' is used to check if the cell value has a double format or not
+    // 'isDoubleVal' is used to check if the cell value has a double format or not (true = wrong format ; false = correct format)
     bool isDoubleVal;
     double cellVal = editedItemText.toDouble(&isDoubleVal);
 
@@ -522,10 +530,19 @@ double savingOverview::setCellAccordingToTextFormat(int row, int col, tableEdit*
     // Setting the Wrong_flag to "1" in order to avoid saving the data
     if (!isDoubleVal) {
         inputTable->setWrongCell(row, col);
-        wrongCellFlag = true;
-    }
-    // 'cellVal' has a proper double format and its backgroud is painted in the correct-cell-format style
-    else {
+
+        // Depending on whether the cell is regarding a Expense or the Income, the proper flag will be updated
+        if (inputTable == expensesTable)
+        {
+            wrongCellFlagE[row] = true;
+        }
+        else if (inputTable == savingTable)
+        {
+            wrongCellFlagI = true;
+        }
+    }    
+    else // 'cellVal' has a proper double format and its backgroud is painted in the correct-cell-format style
+    {
         inputTable->setWrongCell(row, col, false);
 
         // Adding or not the moneyUnit symbol to table according the flag 'moneyUnitFlag'
@@ -537,7 +554,41 @@ double savingOverview::setCellAccordingToTextFormat(int row, int col, tableEdit*
         {
             item->setText(QString::number(cellVal));
         }
-        wrongCellFlag = false;
+
+        // Depending on whether the cell is related to an Expense or an Income, the proper flag will be cleaned
+        if (inputTable == expensesTable) // The cell is from Expenses Table
+        {
+            // Since other cells appart from the modified one could have wrong format, they need to be checked as well 
+            // before cleaning or not the Cell Format Flag for this row
+            if (expensesHeaders[col] == amountHeader)
+            {
+                // Getting the others cell text
+                item = inputTable->item(row, expensesHeaders.indexOf(frequencyHeader));
+                editedItemText = item->text();
+            }
+            else if(expensesHeaders[col] == frequencyHeader)
+            {
+                // Getting the others cell text
+                item = inputTable->item(row, expensesHeaders.indexOf(amountHeader));
+                editedItemText = item->text();
+
+                // Removing the money symbol from the "Amount" cell
+                editedItemText.remove(moneyUnit);
+            }                      
+            
+            // Checking the others cell format before cleaning or not the Cell format flag
+            bool isDoubleVal2;
+            double cellVal2 = editedItemText.toDouble(&isDoubleVal2);
+            if (isDoubleVal2) // If others Cell format is correct
+            {
+                wrongCellFlagE[row] = false;
+            }        
+            
+        }
+        else if (inputTable == savingTable) // The cell is from Income Table
+        {
+            wrongCellFlagI = false;
+        }
     }
 
     // cellVal is returned, and it could be 0.0 in case the format was wrong or the cell double value
@@ -586,6 +637,9 @@ void savingOverview::removeExpense(int row)
     // Removing the "remove position" from the 'iteratorVect' (this is useful to get a proper row removing)
     iteratorVect.erase(iteratorVect.begin() + rmvPos);
 
+    // Removing the cell format flag from the removed row
+    wrongCellFlagE.erase(wrongCellFlagE.begin() + rmvPos);
+
     // Updating the widget fitting
     expensesTable->adaptWidgetToTable();
 
@@ -632,6 +686,9 @@ void savingOverview::addExpense()
         removeExpense(rmvSize - 1);
         });
 
+    // Add a flag into WrongFlag vector with value false (correct cell format)
+    wrongCellFlagE.push_back(false);
+
     //Restoring the blocking signal state of the signals of 'expensesTable'
     expensesTable->blockSignals(emitingSignalState);
 
@@ -648,7 +705,7 @@ void savingOverview::saveDataToDB()
     userInfoBox->setWindowIcon(QIcon(icons::saveIcon));
 
     // If the cell format is not correct
-    if (wrongCellFlag)
+    if (std::count(wrongCellFlagE.begin(), wrongCellFlagE.end(), true) > 0 || wrongCellFlagI == true)
     {
         userInfoBox->setText("You cannot save your expense management until they have a proper format.");
         userInfoBox->setIcon(QMessageBox::Warning);
@@ -709,12 +766,10 @@ void savingOverview::saveDataToDB()
             userInfoBox->setIcon(QMessageBox::Critical);
             userInfoBox->exec();
             return;
-
         }
 
         closeSQLiteDB(db);
     }       
-
 }
 
 // Action from button: Save Button
@@ -726,7 +781,7 @@ void savingOverview::saveDataToCSV()
     userInfoBox->setWindowTitle("Saving Expenses");
     userInfoBox->setWindowIcon(QIcon(icons::saveIcon));
 
-    if (wrongCellFlag)
+    if (std::count(wrongCellFlagE.begin(), wrongCellFlagE.end(), true) > 0 || wrongCellFlagI == true)
     {
         userInfoBox->setText("You cannot save your expense management until they have a proper format.");
         userInfoBox->setIcon(QMessageBox::Warning);
