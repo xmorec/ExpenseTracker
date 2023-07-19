@@ -38,6 +38,12 @@ private:
 	// Vector storing all Users
 	std::vector<User*> users{};
 
+	// Vector storing all Users when initializing preferences window
+	std::vector<User*> usersInit{};
+
+	// Total number of users when initializing preferences window
+	int totalInitUsers{};
+
 	// Informing QMessageBox
 	QMessageBox* userInfoBox = new QMessageBox();
 	

@@ -167,6 +167,12 @@ confWindow::confWindow(User* user) : currentUser(user)
 	// The User Management section is filled with each user information
 	loadUserManagement();
 	
+	// Setting the Users Init vector with the users vector when initializing the preferences window
+	usersInit = users;
+
+	// Updating the total users number (when intializing preferences window)
+	totalInitUsers = users.size();
+
 	// Adding buttons for Saving or Canceling actions made durin User Management 
 	if (users.size() > 0) // If there are other users in Database
 	{
@@ -329,8 +335,18 @@ void confWindow::removeUser(int pos)
 		removedUsers.push_back(pos);
 	}
 
-	// If all users - except the current one - are desired to be removed
-	if (removedUsers.size() == users.size())
+	// rmvUserFlag is used to know if all users - except the logged one - are desired to be removed
+	bool rmvUsersFlag{ true };
+	for (const auto& layout : userHLays)
+	{
+		if (layout) //If there is at least one layout of userHLays that is not a nullptr (which means it is not deleted), flag is set to true.
+		{
+			rmvUsersFlag = false;
+		}
+	}
+
+	// If all users - except the logged one - are desired to be removed (when rmvUsersFlag is true)
+	if (rmvUsersFlag)
 	{
 		infoManText->setText("All users are deleted.\nSave or Cancel the changes.");
 		infoManText->show();
@@ -381,7 +397,7 @@ void confWindow::updateRole(int pos)
 
 // Saves the changes did in the User Management
 void confWindow::saveManagement()
-{
+{	
 	userInfoBox->setWindowTitle("Saving User Management");
 
 	// No changes were done in the user fields of User Management
@@ -411,7 +427,7 @@ void confWindow::saveManagement()
 			for (int i = removedUsers.size() - 1; i >= 0; --i)
 			{
 				// Preparig the clause for Deleting the desired user from Database
-				std::string userName{ users.at(removedUsers[i])->getUserName().toStdString() };
+				std::string userName{ usersInit.at(removedUsers[i])->getUserName().toStdString() };
 				std::string clause{ "WHERE username = '" + userName + "'" };
 
 				// If deleting User, Income and Expenses of desired User from Database was successful
@@ -451,7 +467,7 @@ void confWindow::saveManagement()
 			for (int i = 0; i < modifiedUsers.size(); ++i)
 			{
 				// Preparig the clause for Modifiying the desired user from Database
-				std::string userName{ users.at(modifiedUsers[i])->getUserName().toStdString() };
+				std::string userName{ usersInit.at(modifiedUsers[i])->getUserName().toStdString() };
 				std::string condition{ "username = '" + userName + "'" };
 				std::string role {userRoles[modifiedUsers[i]]->currentText().toStdString()};
 
@@ -465,6 +481,12 @@ void confWindow::saveManagement()
 		// When deleting process in Database was successfuly done
 		if (deletingStatusFlag && modifyStatusFlag)
 		{
+			// After all users were removed according removedUsers vector, this vector is cleared
+			removedUsers.clear();
+
+			// After all users were modified according modifiedUsers vector, this vector is cleared
+			modifiedUsers.clear();
+
 			userInfoBox->setText("User Management has been saved!");
 			userInfoBox->setIcon(QMessageBox::Information);
 			userInfoBox->exec();
@@ -512,6 +534,9 @@ void confWindow::restoreManContent()
 
 	// Data from Database is read and loaded again to the User Management field
 	loadUserManagement();
+
+	// Setting the Users Init vector with the users vector when initializing the preferences window
+	usersInit = users;
 
 	// Button layout is added again to the User Management Layout, just below the users layout
 	userManLay->addLayout(userManButtonsLay);
