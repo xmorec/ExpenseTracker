@@ -208,6 +208,48 @@ bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& 
 	return true;
 }
 
+bool insertRecord(sqlite3* db, const std::string& tableName, const std::vector<std::string>& values)
+{
+	// Create SQL statement of "INSERT INTO" filling a table with 'values'
+	sqlite3_stmt* stmt{};
+
+	// The following string will contain the values sentence needed for the INSERT values Query to the Database
+	std::string valuesStr{""};
+
+	// Constructing the values sentence as valuesStr = "'val1', 'val2', 'val3', ..."
+	for (const std::string& val : values)
+	{
+		valuesStr += "'" + val + "',";
+	}
+	valuesStr.erase(valuesStr.end()-1);
+
+	// Defining the Query for the SQLite: "Insert Into TABLE values (valueStr);"
+	std::string query{ "INSERT INTO " + tableName + " VALUES(" + valuesStr + ");" };
+
+	// Constructing the SQL statement
+	int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, 0);
+
+	if (rc != SQLITE_OK) // The construction of the statement was not successful
+	{
+		sqlite3_finalize(stmt);
+		qDebug() << "\n****************\nrc = " << rc; //Checking the error code
+		const char* errorMessage = sqlite3_errmsg(db);
+		qDebug() << "\n\n\nError message: " << errorMessage << "\n\n****************\n\n\n"; // Checking the error message given by the error code
+
+		return false;
+	}
+
+	//std::string user{ "userT" };
+	//sqlite3_bind_text(stmt, 1, user.c_str(), -1, NULL);
+	//sqlite3_bind_text(stmt, 2, std::to_string(numUsers).c_str(), -1, NULL);
+
+	sqlite3_step(stmt);
+	sqlite3_reset(stmt);
+	sqlite3_finalize(stmt);
+
+	return true;
+}
+
 // Gets the record from a table according the input columns and a clause. It returns the selected records.
 std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, const std::string& columns, const std::string& clause)
 {

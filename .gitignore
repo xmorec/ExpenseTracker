@@ -13,3 +13,6 @@
 /resources/database/dexpenses.txt
 /resources/database/sincome.txt
 /resources/database/dincome.txt
+/resources/database/expensesInfoTable.txt
+/resources/database/incomeInfoTable.txt
+/resources/database/userInfoTable.txt

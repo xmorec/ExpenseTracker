@@ -54,6 +54,7 @@ int getRecordNumber(sqlite3* db, const std::string& tableName, const std::string
 
 // Inserting Record to a table of database. Returns 'true' for a successful inserting, 'false' otherwise
 bool insertRecord(sqlite3* db, const std::string& tableName, const std::string& values);
+bool insertRecord(sqlite3* db, const std::string& tableName, const std::vector<std::string>& values);
 
 // Gets the record from a table according the input columns and a clause. It returns the selected records.
 std::vector<QStringList> getRecords(sqlite3* db, const std::string& tableName, const std::string& columns = "*", const std::string& clause = "");

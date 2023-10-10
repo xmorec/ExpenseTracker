@@ -737,17 +737,27 @@ void savingOverview::saveDataToDB()
             auto indexFreq{ expensesHeaders.indexOf(frequencyHeader) };
 
             // Executing the "INSERT INTO" SQLite Query for each Expense
-            std::string values{};
+            std::vector<std::string> values{};
             for (const QStringList& expense : expenses)
             {
-                values = "'" + userName + "','" + expense[indexExpense].toStdString() + "','" + expense[indexAmount].toStdString() + "','" + expense[indexFreq].toStdString() + "'";
+                values.push_back(userName);
+                values.push_back(expense[indexExpense].toStdString());
+                values.push_back(expense[indexAmount].toStdString());
+                values.push_back(expense[indexFreq].toStdString());
+                values.push_back("none");
 
                 // Refreshing the Saving Status Flag according the result of SQL Insertion
                 savingStatusFlag &= insertRecord(db, DB::tableExpenses, values);
+                values.clear();
             }
 
             // Preparing the values of "INSERT INTO" SQLite Query for the Income
-            values = "'" + userName + "','" + "no_name" + "','" + std::to_string(income) + "','" + "1" + "'";
+            values.push_back(userName);
+            values.push_back("no_name");
+            values.push_back(std::to_string(income));
+            values.push_back("1");
+            values.push_back("none");
+            
 
             // Refreshing the Saving Status Flag according the result of SQL Insertion
             savingStatusFlag &= insertRecord(db, DB::tableIncome, values);

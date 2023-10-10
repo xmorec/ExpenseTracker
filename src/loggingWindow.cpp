@@ -241,7 +241,24 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 
 	// Setting the parameters to be sent to the SQL Query
 	std::string newUsernameStr{ newUsername.toStdString() };
-	std::string values{ "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + hashPass.toUtf8().toStdString() + "','" + userType + "'" };
+
+	// Creating the 'values sentence' for the INSERT INTO query for the Database (" INSERT INTO table VALUES ('val1', 'val2', ...) ")
+	std::vector<std::string> values
+	{
+		newUsernameStr,
+		newUsernameStr,
+		userSalt.toUtf8().toStdString(),
+		hashPass.toUtf8().toStdString(),
+		"none",
+		userType
+	};
+	//values.push_back(newUsernameStr);
+	//values.push_back(newUsernameStr);
+	//values.push_back(userSalt.toUtf8().toStdString());
+	//values.push_back(hashPass.toUtf8().toStdString());
+	//values.push_back("none");
+	//values.push_back(userType);
+
 
 	int it{ 0 };
 	int maxTries{ 7 };
@@ -257,8 +274,14 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		// Generating Hash Password
 		hashPass = hashPassword(plainPassword, userSalt);
 
-		// Updating the string values to be sent to the SQL query
-		values = "'" + newUsernameStr + "','" + newUsernameStr + "','" + userSalt.toUtf8().toStdString() + "','" + hashPass.toUtf8().toStdString() + "','" + userType + "'";
+		// Updating the values vector to be sent to the SQL query
+		values.clear();
+		values.push_back(newUsernameStr);
+		values.push_back(newUsernameStr);
+		values.push_back(userSalt.toUtf8().toStdString());
+		values.push_back(hashPass.toUtf8().toStdString());
+		values.push_back("none");
+		values.push_back(userType);
 
 		++it;
 	}
