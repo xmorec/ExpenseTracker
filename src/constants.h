@@ -9,6 +9,7 @@ namespace DB
 	inline const std::string tableUsers{ "Users" };
 	inline const std::string tableExpenses{ "Expenses" };
 	inline const std::string tableIncome{ "Income" };
+	inline const std::string tableGroups{ "Groups" };
 
 	inline const std::string col_username{ "username" };
 	inline const std::string col_name{ "name" };
@@ -36,6 +37,8 @@ namespace icons
 	inline const QString loggingIcon2 { "resources/icons/signin.png" };
 	inline const QString saveIcon{ "resources/icons/saveIcon.png" };
 	inline const QString prefIcon{ "resources/icons/preferences.png" };
+	inline const QString groupPrefIcon{ "resources/icons/groupPref2.png" };
+	inline const QString noGroupfIcon{ "resources/icons/no_group.png" };
 	inline const QString removeIcon{ "resources/icons/remove_user.png" };
 	inline const QString removeExpense { "resources/icons/remove_expense.png"};
 }

@@ -90,5 +90,8 @@
     <QtMoc Include="src\usr_preferences.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="src\group_management.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
 </Project>

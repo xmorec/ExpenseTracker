@@ -10,6 +10,7 @@
 #include "savingOverview.h"
 #include "User.h"
 #include "usr_preferences.h"
+#include "group_management.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         

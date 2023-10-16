@@ -114,6 +114,7 @@
     <ClInclude Include="src\constants.h" />
     <QtMoc Include="src\usr_preferences.h" />
     <QtMoc Include="src\iconButton.h" />
+    <QtMoc Include="src\group_management.h" />
     <ClInclude Include="src\sql_functions.h" />
     <ClInclude Include="src\User.h" />
     <QtMoc Include="src\loggingWindow.h" />
