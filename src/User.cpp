@@ -89,6 +89,17 @@ void User::setSaltDB(const QByteArray& salt)
 	this->saltDB = salt;
 }
 
+// Gets the Group ID
+const QString& User::getGroupID()
+{
+	return groupID;
+}
+
+// Sets the Group ID
+void User::setGroupID(const QString& ID)
+{
+	this->groupID = ID;
+}
 
 ////////////////////////////////////////////////////////////////////////
 // SUPPORTING FUNCTIONS TO CREATE PASSWORD AND CHECK USER NAME FORMAT //

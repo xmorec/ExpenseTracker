@@ -62,7 +62,7 @@ mainWindow::mainWindow(User* currentUser)
    buttonLayout->addWidget(groupButt);
 
    // Declaring and Initializing the Preferences Window
-   groupManWindow* groupManWin{new groupManWindow()};
+   groupManWindow* groupManWin{new groupManWindow(currentUser)};
 
    // When clicking in the Preferences Button, the Preferences Window is shown
    QObject::connect(groupButt, &QPushButton::clicked, [=]() {

@@ -107,7 +107,7 @@ void loggingWindow::loadUsersFromDB()
 		}
 
 		//records gets the output of the SELECT query given by 'getRecords()'
-		std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, user_type") };
+		std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, group_ID, user_type") };
 
 		// Load the database users to the Users vector 'users'
 		if (!records.empty())
@@ -120,7 +120,8 @@ void loggingWindow::loadUsersFromDB()
 				userDB->setHashPassword(record[3]);
 				userDB->setSaltDB(record[2].toUtf8());
 				userDB->setHashPasswordDB(record[3].toUtf8());
-				userDB->setUserType(record[4]);
+				userDB->setGroupID(record[4]);
+				userDB->setUserType(record[5]);
 				users.push_back(userDB);
 			}
 		}
@@ -249,16 +250,9 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		newUsernameStr,
 		userSalt.toUtf8().toStdString(),
 		hashPass.toUtf8().toStdString(),
-		"none",
+		DB::NO_GROUP.toStdString(),
 		userType
 	};
-	//values.push_back(newUsernameStr);
-	//values.push_back(newUsernameStr);
-	//values.push_back(userSalt.toUtf8().toStdString());
-	//values.push_back(hashPass.toUtf8().toStdString());
-	//values.push_back("none");
-	//values.push_back(userType);
-
 
 	int it{ 0 };
 	int maxTries{ 7 };
@@ -280,7 +274,7 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		values.push_back(newUsernameStr);
 		values.push_back(userSalt.toUtf8().toStdString());
 		values.push_back(hashPass.toUtf8().toStdString());
-		values.push_back("none");
+		values.push_back(DB::NO_GROUP.toStdString());
 		values.push_back(userType);
 
 		++it;
@@ -298,6 +292,7 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		newUser->setSalt(userSalt);
 		newUser->setHashPasswordDB(hashPass.toUtf8());
 		newUser->setSaltDB(userSalt.toUtf8());
+		newUser->setGroupID(DB::NO_GROUP);
 		newUser->setUserType(QString::fromStdString(userType));
 
 		return true;

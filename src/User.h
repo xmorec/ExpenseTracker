@@ -27,6 +27,8 @@ private:
 	QByteArray saltDB{};
 	QByteArray hashPasswordDB{};
 
+	QString groupID{};
+
 	
 public:
 	// Constructs a User Object getting as an input the username
@@ -73,6 +75,12 @@ public:
 
 	// Sets the Salt in UTF-8
 	void setSaltDB(const QByteArray& salt);
+
+	// Gets the Group ID
+	const QString& getGroupID();
+
+	// Sets the Group ID
+	void setGroupID(const QString& ID);
 
 };
 
