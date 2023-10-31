@@ -21,13 +21,10 @@
 struct Group
 {
 	int ID{};
-	std::string name{};
-	//std::vector<std::string> users{};
-	//std::vector<std::string> in_requests{};
-	//std::vector<std::string> out_requests{};
-	std::string users{};
-	std::string in_requests{};
-	std::string out_requests{};
+	QString name{};
+	QStringList users{};
+	QStringList in_requests{};
+	QStringList out_requests{};
 };
 
 class groupManWindow : public QDialog
@@ -64,6 +61,8 @@ private:
 	labelButton* leaveGroupButt{ new labelButton("Leave the group") };
 	labelButton* renameGroupButt{ new labelButton("Rename group") };
 	labelButton* removeGroupButt{ new labelButton("Remove group") };
+	labelButton* saveButt{ new labelButton("Save") };
+	labelButton* cancelButt{ new labelButton("Cancel") };
 
 	// Vertical Layout containing all widgets
 	QVBoxLayout* mainVLay{ new QVBoxLayout() };
@@ -71,7 +70,8 @@ private:
 	// Dialog section used to create new group
 	QLineEdit* newNameLineEdit{ new QLineEdit()};
 	QHBoxLayout* newNameLay{ new QHBoxLayout() };
-	QLabel* newNameLabel { new QLabel("Set a group name")};
+	QHBoxLayout* saveCancelLay{ new QHBoxLayout() };
+	QLabel* newNameLabel { new QLabel("Set a group name:")};
 
 public:
 
@@ -90,7 +90,6 @@ public:
 
 		mainVLay->addWidget(infoText, 0, Qt::AlignCenter | Qt::AlignTop);
 
-
 		// Adding the Logging Image
 		QLabel* imageLabel = new QLabel();
 		QPixmap noGroupImage(icons::noGroupfIcon);
@@ -98,9 +97,11 @@ public:
 		mainVLay->addWidget(imageLabel, 0, Qt::AlignCenter);
 
 		mainVLay->addWidget(createGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);		
-		newNameLay->addWidget(newNameLabel);
-		newNameLay->addWidget(newNameLineEdit);
+		newNameLay->addWidget(newNameLabel, 0, Qt::AlignRight);
+		newNameLay->addWidget(newNameLineEdit, 0, Qt::AlignLeft);
+		newNameLineEdit->setFixedWidth(130);
 		mainVLay->addLayout(newNameLay);
+		newNameLay->setAlignment(Qt::AlignCenter);
 		mainVLay->addWidget(joinGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(removeReqButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(inviteUserButt, 0, Qt::AlignCenter | Qt::AlignTop);
@@ -108,15 +109,19 @@ public:
 		mainVLay->addWidget(leaveGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(renameGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(removeGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
+		saveCancelLay->addWidget(saveButt, 0, Qt::AlignRight);
+		saveCancelLay->addWidget(cancelButt, 0, Qt::AlignLeft);		
+		mainVLay->addLayout(saveCancelLay);
+		saveCancelLay->setAlignment(Qt::AlignCenter);
 
-		// In case the current User has no group
-		if (currentUser->getGroupID() == DB::NO_GROUP )
-		{
-			loadNoGroupView();
-		}
+		// Select and load proper view according the group status of logged user
+		selectView();
 
 		setLayout(mainVLay);
 
+
+		// Load all groups from DB
+		loadGroupsFromDB();
 
 
 		QObject::connect(createGroupButt, &QPushButton::clicked, [=]() {
@@ -151,8 +156,29 @@ public:
 
 			});
 
+		QObject::connect(saveButt, &QPushButton::clicked, [=]() {
+			createGroup();
+			});
+
+		QObject::connect(cancelButt, &QPushButton::clicked, [=]() {
+			selectView();
+			});
+
 	}
 
+
+	void selectView()
+	{
+		newNameLineEdit->setText("");
+
+		// In case the User has no group
+		if (currentUser->getGroupID() == DB::NO_GROUP)
+		{
+			loadNoGroupView();
+			return;
+		}
+
+	}
 	
 	void loadUsersFromDB()
 	{
@@ -214,7 +240,7 @@ public:
 			//records gets the output of the SELECT query given by 'getRecords()'
 			std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "ID, name, users, in_requests, out_requests") };
 
-			// Load the database groups to the Users vector 'users' in case they exist in Database
+			// Load the database groups to the Groups vector 'groups' in case they exist in Database
 			if (!records.empty())
 			{
 				// For every record, a user is read and stored in the Users vector (except from the current User)
@@ -223,24 +249,19 @@ public:
 					//if (!(record[0] == currentUser->getUserName())) // No current user
 					//{
 					// Creating a new User and setting their parameters from the records of Database
+
 					Group* groupDB{ new Group {
-						record[0].toInt(),
-						record[1].toStdString(),
-						record[2].toStdString(),
-						record[3].toStdString(),
-						record[4].toStdString(),
+						record[0].toInt(),    // Group ID
+						record[1],			  // Group Name	
+						record[2].split(", "), // users in the group
+						record[3].split(", "), // in requests
+						record[4].split(", "), // out requests
 					} };
 						// Inserting the Group to the groups vector
 						groups.push_back(groupDB);
 
 					//}
 				}
-			}
-			else // When there are no users in Database (even not the current user)
-			{
-				userInfoBox->setIcon(QMessageBox::Warning);
-				userInfoBox->setText("There are no groups in Database");
-				userInfoBox->exec();
 			}
 			closeSQLiteDB(db);
 		}
@@ -250,7 +271,7 @@ public:
 	{
 		newNameLabel->show();
 		newNameLineEdit->show();
-		createGroupButt->setVisible(true);
+		createGroupButt->setVisible(false);
 		joinGroupButt->setVisible(false);
 		removeReqButt->setVisible(false);
 		inviteUserButt->setVisible(false);
@@ -258,11 +279,15 @@ public:
 		leaveGroupButt->setVisible(false);
 		renameGroupButt->setVisible(false);
 		removeGroupButt->setVisible(false);
+		saveButt->setVisible(true);
+		cancelButt->setVisible(true);
 	}
 
 	void loadNoGroupView()
 	{
 		infoText->setText("You are not a member of a group yet");
+		newNameLabel->hide();
+		newNameLineEdit->hide();
 		createGroupButt->setVisible(true);
 		joinGroupButt->setVisible(true);
 		removeReqButt->setVisible(false);
@@ -271,8 +296,36 @@ public:
 		leaveGroupButt->setVisible(false);
 		renameGroupButt->setVisible(false);
 		removeGroupButt->setVisible(false);
-		newNameLabel->hide();
-		newNameLineEdit->hide();
+		saveButt->setVisible(false);
+		cancelButt->setVisible(false);
+
+	}
+
+	void createGroup()
+	{
+		QString newGroupName{ newNameLineEdit->text() };
+
+		if (newGroupName.isEmpty())
+		{
+			userInfoBox->setText("Group name cannot be empty.");
+			userInfoBox->setIcon(QMessageBox::Warning);
+			userInfoBox->exec();
+			return;
+		}
+
+		// Checks if the userName already exists from all other users
+		for (Group* group : groups)
+		{
+			if (newGroupName == group->name)
+			{
+				userInfoBox->setText("This group name already exists.");
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->exec();
+				return;
+			}
+		}
+
+
 	}
 
 };

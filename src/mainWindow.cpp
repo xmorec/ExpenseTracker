@@ -73,10 +73,10 @@ mainWindow::mainWindow(User* currentUser)
        });
 
    // When Preferences Window is closed, its size should be restored in case it is opened again
-   /*QObject::connect(prefWin, &QDialog::rejected, [=]() {
-       prefWin->restartContents();
+   QObject::connect(groupManWin, &QDialog::rejected, [=]() {
+       groupManWin->selectView();
        });
-       */
+       
 
    mainVLayout->addLayout(buttonLayout);
    mainVLayout->setAlignment(buttonLayout, Qt::AlignLeft);
