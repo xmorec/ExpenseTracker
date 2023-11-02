@@ -250,7 +250,7 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		newUsernameStr,
 		userSalt.toUtf8().toStdString(),
 		hashPass.toUtf8().toStdString(),
-		DB::NO_GROUP.toStdString(),
+		std::to_string(DB::NO_GROUP),
 		userType
 	};
 
@@ -274,7 +274,7 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		values.push_back(newUsernameStr);
 		values.push_back(userSalt.toUtf8().toStdString());
 		values.push_back(hashPass.toUtf8().toStdString());
-		values.push_back(DB::NO_GROUP.toStdString());
+		values.push_back(std::to_string(DB::NO_GROUP));
 		values.push_back(userType);
 
 		++it;
@@ -292,7 +292,7 @@ bool loggingWindow::insertUserToDB(sqlite3* db, const QString& newUsername)
 		newUser->setSalt(userSalt);
 		newUser->setHashPasswordDB(hashPass.toUtf8());
 		newUser->setSaltDB(userSalt.toUtf8());
-		newUser->setGroupID(DB::NO_GROUP);
+		newUser->setGroupID(QString::number(DB::NO_GROUP));
 		newUser->setUserType(QString::fromStdString(userType));
 
 		return true;

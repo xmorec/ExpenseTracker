@@ -145,7 +145,7 @@ public:
 			});
 
 		QObject::connect(leaveGroupButt, &QPushButton::clicked, [=]() {
-
+			leaveGroup();
 			});
 
 		QObject::connect(renameGroupButt, &QPushButton::clicked, [=]() {
@@ -172,9 +172,16 @@ public:
 		newNameLineEdit->setText("");
 
 		// In case the User has no group
-		if (currentUser->getGroupID() == DB::NO_GROUP)
+		if (currentUser->getGroupID().toInt() == DB::NO_GROUP)
 		{
 			loadNoGroupView();
+			return;
+		}
+		
+		// In case the User has a group
+		if (currentUser->getGroupID().toInt() != DB::NO_GROUP)
+		{
+			loadGroupView();
 			return;
 		}
 
@@ -238,7 +245,7 @@ public:
 		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
 		{
 			//records gets the output of the SELECT query given by 'getRecords()'
-			std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "ID, name, users, in_requests, out_requests") };
+			std::vector<QStringList> records{ getRecords(db, DB::tableGroups, "ID, name, users, in_requests, out_requests") };
 
 			// Load the database groups to the Groups vector 'groups' in case they exist in Database
 			if (!records.empty())
@@ -301,6 +308,24 @@ public:
 
 	}
 
+	void loadGroupView()
+	{
+		infoText->setText("You are a member of a group");
+		newNameLabel->hide();
+		newNameLineEdit->hide();
+		createGroupButt->setVisible(false);
+		joinGroupButt->setVisible(false);
+		removeReqButt->setVisible(false);
+		inviteUserButt->setVisible(true);
+		requestsButt->setVisible(true);
+		leaveGroupButt->setVisible(true);
+		renameGroupButt->setVisible(true);
+		removeGroupButt->setVisible(false);
+		saveButt->setVisible(false);
+		cancelButt->setVisible(false);
+
+	}
+
 	void createGroup()
 	{
 		QString newGroupName{ newNameLineEdit->text() };
@@ -325,6 +350,59 @@ public:
 			}
 		}
 
+		sqlite3* db{};
+
+		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
+		{
+
+			int groupNum{ static_cast<int>(groups.size()) + 1};
+
+			std::vector<std::string> values
+			{
+				std::to_string(static_cast<int>(groupNum)), //ID INTEGER NOT NULL,
+				newGroupName.toStdString(), //name NVARCHAR(50) NOT NULL,
+				currentUser->getUserName().toStdString(), //users VARCHAR(500),
+				"0", //in_requests VARCHAR(100),
+				"0" //out_requests VARCHAR(100)
+			};
+
+
+			// Tries to insert the new User to DB and also adds it to the 'users' vector
+			if (insertRecord(db, DB::tableGroups, values))
+			{
+				userInfoBox->setIcon(QMessageBox::Information);
+				userInfoBox->setText("New Group Created!");
+
+				groups.push_back(new Group{ groupNum, newGroupName, {currentUser->getUserName()}, {"0"}, {"0"} });
+
+				currentUser->setGroupID(QString::number(groupNum));
+
+				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
+				std::string condition{ DB::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };
+				if (!updateRecords(db, DB::tableUsers, DB::col_groupID, std::to_string(groupNum), condition))
+				{
+					userInfoBox->setIcon(QMessageBox::Warning);
+					userInfoBox->setText("Group was created, however, user could not be enrolled to the group due to unknown issues!");
+				}
+
+			}
+			else
+			{
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->setText("Group could not be created!");
+			}
+
+			closeSQLiteDB(db);
+
+			//Show infoBox
+			userInfoBox->exec();
+		}
+
+		selectView();
+	}
+
+	void leaveGroup()
+	{
 
 	}
 

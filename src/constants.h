@@ -16,6 +16,7 @@ namespace DB
 	inline const std::string col_hashpass{ "hash_password" };
 	inline const std::string col_salt{ "salt" };
 	inline const std::string col_usertype{ "user_type" };
+	inline const std::string col_groupID{ "group_ID" };
 
 
 	namespace UserType
@@ -24,7 +25,7 @@ namespace DB
 		inline const std::string admin{ "admin" };
 	}
 
-	inline const QString NO_GROUP{ "0" }; // "0" is the non-group value (group ID = 0)
+	inline const int NO_GROUP{ 0 }; // "0" is the non-group value (group ID = 0)
 
 	inline const int OPEN_SUCCESS{ 100 }; // Return value when Database and tables exists and also Database could be opened
 	inline const int OPEN_NOT_SUCCESS{ 101 }; // Return value when Tables are not existing
