@@ -73,6 +73,10 @@ private:
 	QHBoxLayout* saveCancelLay{ new QHBoxLayout() };
 	QLabel* newNameLabel { new QLabel("Set a group name:")};
 
+	// Create a Dialog useful to join to any created group
+	//std::unique_ptr<QDialog> join2GroupWin{ std::make_unique<QDialog>() };
+	QDialog* join2GroupWin {new QDialog ()};
+
 public:
 
 	groupManWindow(User* currentUser) : currentUser(currentUser)
@@ -123,13 +127,38 @@ public:
 		// Load all groups from DB
 		loadGroupsFromDB();
 
+		/* ****************************************************************  */
+		//Create a Dialog useful to join to any created group
+		join2GroupWin->setWindowTitle("Join to a group");
+		join2GroupWin->setWindowIcon(QIcon(icons::groupPrefIcon));
+		
+		std::vector<QLabel*> nameGroup{};
+		std::vector<QHBoxLayout*> hLayGroups{};
+
+		auto vLayGroups{ new QVBoxLayout() };
+		for (Group* group : groups)
+		{
+			nameGroup.push_back(new QLabel(group->name));
+			hLayGroups.push_back(new QHBoxLayout());
+			hLayGroups.back()->addWidget(nameGroup.back());
+			vLayGroups->addLayout(hLayGroups.back());
+		}
+		
+		join2GroupWin->setLayout(vLayGroups);
+		
+
+		// Set fixed Dialog size (user cannot resize it)
+		join2GroupWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
+
+		/* ****************************************************************  */
+		
 
 		QObject::connect(createGroupButt, &QPushButton::clicked, [=]() {
 			loadCreateGroupSection();
 			 });
 
 		QObject::connect(joinGroupButt, &QPushButton::clicked, [=]() {
-
+			joinToGroup();
 			});
 
 		QObject::connect(removeReqButt, &QPushButton::clicked, [=]() {
@@ -399,6 +428,12 @@ public:
 		}
 
 		selectView();
+	}
+
+	void joinToGroup()
+	{		
+		
+		join2GroupWin->exec();
 	}
 
 	void leaveGroup()
