@@ -132,24 +132,23 @@ public:
 		join2GroupWin->setWindowTitle("Join to a group");
 		join2GroupWin->setWindowIcon(QIcon(icons::groupPrefIcon));
 		
-		std::vector<QLabel*> nameGroup{};
-		std::vector<QHBoxLayout*> hLayGroups{};
+		QGroupBox* Join2GroupBox = new QGroupBox("Join to a Group");
+		//Join2GroupBox->setFixedWidth(150);
+		std::vector<labelButton*> nameGroup{};
 
 		auto vLayGroups{ new QVBoxLayout() };
 		for (Group* group : groups)
 		{
-			nameGroup.push_back(new QLabel(group->name));
-			hLayGroups.push_back(new QHBoxLayout());
-			hLayGroups.back()->addWidget(nameGroup.back());
-			vLayGroups->addLayout(hLayGroups.back());
+			nameGroup.push_back(new labelButton(group->name));
+			vLayGroups->addWidget(nameGroup.back());
 		}
 		
-		join2GroupWin->setLayout(vLayGroups);
-		
+		Join2GroupBox->setLayout(vLayGroups);
+		join2GroupWin->setLayout(new QVBoxLayout());
+		join2GroupWin->layout()->addWidget(Join2GroupBox);		
 
 		// Set fixed Dialog size (user cannot resize it)
 		join2GroupWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
-
 		/* ****************************************************************  */
 		
 
@@ -158,7 +157,7 @@ public:
 			 });
 
 		QObject::connect(joinGroupButt, &QPushButton::clicked, [=]() {
-			joinToGroup();
+			join2GroupWin->exec();
 			});
 
 		QObject::connect(removeReqButt, &QPushButton::clicked, [=]() {
@@ -192,6 +191,13 @@ public:
 		QObject::connect(cancelButt, &QPushButton::clicked, [=]() {
 			selectView();
 			});
+
+		for (labelButton*& groupReq : nameGroup)
+		{
+			QObject::connect(groupReq, &QPushButton::clicked, [=]() {				
+				joinRequest(groupReq->text());
+				});
+		}
 
 	}
 
@@ -430,10 +436,16 @@ public:
 		selectView();
 	}
 
-	void joinToGroup()
-	{		
-		
-		join2GroupWin->exec();
+
+	void joinRequest(const QString& nameGroup)
+	{
+		int ID{0};
+		auto id_search{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->name == nameGroup; }) };
+
+		if (id_search != groups.end())
+		{
+			ID = (*id_search)->ID;
+		}
 	}
 
 	void leaveGroup()

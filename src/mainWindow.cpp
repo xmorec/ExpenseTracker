@@ -55,7 +55,7 @@ mainWindow::mainWindow(User* currentUser)
    //////////////////////////////////////////////////////////////////////////////////////////
    ////////////////////////  ADDING GROUP PREFERENCES ICON  /////////////////////////////////
 
-// Add a clickable Icon related to the Preferences
+   // Add a clickable Icon related to the Preferences
    iconButton* groupButt = new iconButton(QIcon(icons::groupPrefIcon));
    groupButt->setToolTip("Open Group Management menu");
    groupButt->setIconSize(26);
