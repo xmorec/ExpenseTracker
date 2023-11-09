@@ -472,7 +472,7 @@ void confWindow::saveManagement()
 				std::string role {userRoles[modifiedUsers[i]]->currentText().toStdString()};
 
 				// modifying Status Flag is updated according the result of the updating Database process
-				modifyStatusFlag &= updateRecords(db, DB::tableUsers, DB::col_usertype, role, condition);
+				modifyStatusFlag &= updateRecords(db, DB::tableUsers, DB::Users::col_usertype, role, condition);
 			}
 		}
 
@@ -746,7 +746,7 @@ void confWindow::updatePassword()
 		std::string userName{ currentUser->getUserName().toStdString() };
 
 		// Sets a flag with the result (true/false) of updating data in database with new Password
-		bool hpassFlag{ updateRecords(db, DB::tableUsers, DB::col_hashpass, hashPassDB, DB::col_username + " = '" + userName + "'") };
+		bool hpassFlag{ updateRecords(db, DB::tableUsers, DB::Users::col_hashpass, hashPassDB, DB::Users::col_username + " = '" + userName + "'") };
 		bool saltFlag{ true };		
 
 		//'it' and 'maxTries' are used to assure a proper hash password to Database is generated
@@ -769,8 +769,8 @@ void confWindow::updatePassword()
 			condition =  "username = '" + currentUser->getUserName().toStdString() + "'";
 
 			// New Hash Password and Salt are inserted to Database
-			hpassFlag = updateRecords(db, DB::tableUsers, DB::col_hashpass, hashPassDB, DB::col_username + " = '" + userName + "'");
-			saltFlag = updateRecords(db, DB::tableUsers, DB::col_salt, userSalt.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
+			hpassFlag = updateRecords(db, DB::tableUsers, DB::Users::col_hashpass, hashPassDB, DB::Users::col_username + " = '" + userName + "'");
+			saltFlag = updateRecords(db, DB::tableUsers, DB::Users::col_salt, userSalt.toUtf8().toStdString(), DB::Users::col_username + " = '" + userName + "'");
 
 			++it;
 		}
@@ -796,8 +796,8 @@ void confWindow::updatePassword()
 		else //When updating User Password and Salt to the DB was not successful
 		{
 			// Previous values of HashPassword and Salt are inserted again to the Database
-			updateRecords(db, DB::tableUsers, DB::col_hashpass, userPass.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
-			updateRecords(db, DB::tableUsers, DB::col_salt, userSalt.toUtf8().toStdString(), DB::col_username + " = '" + userName + "'");
+			updateRecords(db, DB::tableUsers, DB::Users::col_hashpass, userPass.toUtf8().toStdString(), DB::Users::col_username + " = '" + userName + "'");
+			updateRecords(db, DB::tableUsers, DB::Users::col_salt, userSalt.toUtf8().toStdString(), DB::Users::col_username + " = '" + userName + "'");
 
 			userInfoBox->setText("New password could not be successfuly saved. Please, try again.");
 			userInfoBox->setIcon(QMessageBox::Warning);

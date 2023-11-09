@@ -5,32 +5,57 @@
 
 namespace DB
 {
+	// Database Path
 	inline const std::string dbFilePath{ "resources/database/ExpenseTrackerDB.db" };
+
+	// Database Tables
 	inline const std::string tableUsers{ "Users" };
 	inline const std::string tableExpenses{ "Expenses" };
 	inline const std::string tableIncome{ "Income" };
 	inline const std::string tableGroups{ "Groups" };
 
-	inline const std::string col_username{ "username" };
-	inline const std::string col_name{ "name" };
-	inline const std::string col_hashpass{ "hash_password" };
-	inline const std::string col_salt{ "salt" };
-	inline const std::string col_usertype{ "user_type" };
-	inline const std::string col_groupID{ "group_ID" };
-
-
-	namespace UserType
-	{
-		inline const std::string user{ "user" };
-		inline const std::string admin{ "admin" };
-	}
-
 	inline const int NO_GROUP{ 0 }; // "0" is the non-group value (group ID = 0)
 
+	// Return values when accessing to the Database
 	inline const int OPEN_SUCCESS{ 100 }; // Return value when Database and tables exists and also Database could be opened
 	inline const int OPEN_NOT_SUCCESS{ 101 }; // Return value when Tables are not existing
 	inline const int NO_TABLES { 102 }; // Return value when Tables are not existing
 	inline const int NO_DB { 103 }; // Return value when Database is not existing
+
+
+	namespace Users
+	{
+		// Table Users
+		inline const std::string col_username{ "username" };
+		inline const std::string col_name{ "name" };
+		inline const std::string col_hashpass{ "hash_password" };
+		inline const std::string col_salt{ "salt" };
+		inline const std::string col_usertype{ "user_type" };
+		inline const std::string col_groupID{ "group_ID" };
+
+	}
+
+	namespace Groups
+	{
+		// Table Groups
+		inline const std::string col_ID{ "ID" };
+		inline const std::string col_group_name{ "name" };
+		inline const std::string col_users{ "users" };
+		inline const std::string col_inrequests{ "in_requests" };
+		inline const std::string col_outrequests{ "out_requests" };
+		inline const std::string col_status{ "status" };
+
+		// Status values
+		inline const QString status_active{ "active" }; // status_active is when a group is active
+		inline const QString status_inactive{ "inactive" }; // status_inactive is when a group is considered as removed or inactive
+	}
+
+	namespace UserType
+	{
+		inline const std::string user{ "user" };
+		inline const std::string admin{ "admin" };	
+	}
+
 }
 
 namespace icons

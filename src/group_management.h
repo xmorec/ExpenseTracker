@@ -25,6 +25,7 @@ struct Group
 	QStringList users{};
 	QStringList in_requests{};
 	QStringList out_requests{};
+	QString status{};
 };
 
 class groupManWindow : public QDialog
@@ -139,8 +140,11 @@ public:
 		auto vLayGroups{ new QVBoxLayout() };
 		for (Group* group : groups)
 		{
-			nameGroup.push_back(new labelButton(group->name));
-			vLayGroups->addWidget(nameGroup.back());
+			if (group->status == DB::Groups::status_active) // just adding the active groups
+			{
+				nameGroup.push_back(new labelButton(group->name));
+				vLayGroups->addWidget(nameGroup.back());
+			}
 		}
 		
 		Join2GroupBox->setLayout(vLayGroups);
@@ -195,7 +199,15 @@ public:
 		for (labelButton*& groupReq : nameGroup)
 		{
 			QObject::connect(groupReq, &QPushButton::clicked, [=]() {				
-				joinRequest(groupReq->text());
+				bool requestFlag{ joinRequest(groupReq->text()) };
+				
+				if (requestFlag == true)
+				{
+					join2GroupWin->close();
+				}
+
+				selectView();
+
 				});
 		}
 
@@ -210,14 +222,12 @@ public:
 		if (currentUser->getGroupID().toInt() == DB::NO_GROUP)
 		{
 			loadNoGroupView();
-			return;
 		}
 		
 		// In case the User has a group
 		if (currentUser->getGroupID().toInt() != DB::NO_GROUP)
 		{
 			loadGroupView();
-			return;
 		}
 
 	}
@@ -268,7 +278,6 @@ public:
 		}
 	}
 
-
 	void loadGroupsFromDB()
 	{
 		// Clearing Users vector in order to get better results
@@ -280,29 +289,31 @@ public:
 		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
 		{
 			//records gets the output of the SELECT query given by 'getRecords()'
-			std::vector<QStringList> records{ getRecords(db, DB::tableGroups, "ID, name, users, in_requests, out_requests") };
+			std::string columns
+			{
+				DB::Groups::col_ID + ", " + DB::Groups::col_group_name + ", " + DB::Groups::col_users + ", " + DB::Groups::col_inrequests + ", " + DB::Groups::col_outrequests + ", " + DB::Groups::col_status
+			};
+			std::vector<QStringList> records{ getRecords(db, DB::tableGroups, columns) };
 
 			// Load the database groups to the Groups vector 'groups' in case they exist in Database
 			if (!records.empty())
 			{
-				// For every record, a user is read and stored in the Users vector (except from the current User)
+				// For every record, a group is read and stored in the groups vector
 				for (const QStringList& record : records)
 				{
-					//if (!(record[0] == currentUser->getUserName())) // No current user
-					//{
-					// Creating a new User and setting their parameters from the records of Database
 
 					Group* groupDB{ new Group {
-						record[0].toInt(),    // Group ID
-						record[1],			  // Group Name	
+						record[0].toInt(),     // Group ID
+						record[1],			   // Group Name	
 						record[2].split(", "), // users in the group
 						record[3].split(", "), // in requests
 						record[4].split(", "), // out requests
+						record[5]			   // status group
 					} };
-						// Inserting the Group to the groups vector
-						groups.push_back(groupDB);
 
-					//}
+					// Inserting the Group to the groups vector
+					groups.push_back(groupDB);
+
 				}
 			}
 			closeSQLiteDB(db);
@@ -376,7 +387,8 @@ public:
 		// Checks if the userName already exists from all other users
 		for (Group* group : groups)
 		{
-			if (newGroupName == group->name)
+			// If the new group name already exists for an active group, a warning pops up
+			if ((newGroupName == group->name) && (group->status == DB::Groups::status_active))
 			{
 				userInfoBox->setText("This group name already exists.");
 				userInfoBox->setIcon(QMessageBox::Warning);
@@ -397,10 +409,10 @@ public:
 				std::to_string(static_cast<int>(groupNum)), //ID INTEGER NOT NULL,
 				newGroupName.toStdString(), //name NVARCHAR(50) NOT NULL,
 				currentUser->getUserName().toStdString(), //users VARCHAR(500),
-				"0", //in_requests VARCHAR(100),
-				"0" //out_requests VARCHAR(100)
+				"", //in_requests VARCHAR(100),
+				"", //out_requests VARCHAR(100)
+				DB::Groups::status_active.toStdString() // Setting the status group to active
 			};
-
 
 			// Tries to insert the new User to DB and also adds it to the 'users' vector
 			if (insertRecord(db, DB::tableGroups, values))
@@ -413,8 +425,8 @@ public:
 				currentUser->setGroupID(QString::number(groupNum));
 
 				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
-				std::string condition{ DB::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };
-				if (!updateRecords(db, DB::tableUsers, DB::col_groupID, std::to_string(groupNum), condition))
+				std::string condition{ DB::Users::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };
+				if (!updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string(groupNum), condition))
 				{
 					userInfoBox->setIcon(QMessageBox::Warning);
 					userInfoBox->setText("Group was created, however, user could not be enrolled to the group due to unknown issues!");
@@ -437,15 +449,109 @@ public:
 	}
 
 
-	void joinRequest(const QString& nameGroup)
+	bool joinRequest(const QString& nameGroup)
 	{
-		int ID{0};
+		int groupID{ DB::NO_GROUP };
 		auto id_search{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->name == nameGroup; }) };
 
-		if (id_search != groups.end())
+		QMessageBox msgBox{};
+		msgBox.setWindowTitle("Join group request");
+		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
+
+		if (id_search != groups.end()) // If there is a group with 'nameGroup' in groups vector
 		{
-			ID = (*id_search)->ID;
+			if ((*id_search)->status == DB::Groups::status_inactive) // In case this group is an inactive group, it is considered as it does not exist
+			{
+				msgBox.setText("No group was found with name '" + nameGroup + "'");
+				msgBox.setStandardButtons(QMessageBox::Close);
+				msgBox.setIcon(QMessageBox::Warning);
+				msgBox.exec();
+				return false;
+			}
+
+			groupID = (*id_search)->ID;
+
+			msgBox.setText("Do you want to request to join group '" + nameGroup + "'");
+			msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msgBox.setIcon(QMessageBox::Question);
+			int answer = msgBox.exec();
+
+			// When Pressing "Yes" button 
+			if (answer == QMessageBox::Yes)
+			{
+				sqlite3* db{};
+
+				if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
+				{
+
+					// Selecting the cell from Groups Table regarding the "in_requests" column in for the selected "group ID"
+					QString inRequests { getRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "WHERE " + DB::Groups::col_ID + " = '" + std::to_string(groupID) + "'")[0][0] };
+
+					// inRequests adds the new user as a request
+					if (inRequests.isEmpty()) // When "in_requests" has not any user request
+					{
+						inRequests = currentUser->getUserName();
+					}
+					else //When one or more users has requested to join the selected group
+					{
+						inRequests += ", " + currentUser->getUserName();
+					}
+
+
+					// This flag will be the returning value for this function according a successful request writing to database or not
+					bool requestFlag{};
+
+					// Setting the condition for updating the "group_id" column (Users Table) for the selected user
+					std::string conditionUsers { DB::Users::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };	
+
+					// Setting the condition for updating "in_requests" column (Groups Table)
+					std::string conditionGroups{ DB::Groups::col_ID + " = '" + std::to_string(groupID) + "'" };
+
+					// Updating in the database (Table Users and Table Groups) the user information for this request:
+					if ( updateRecords(db, DB::tableUsers, DB::Users::col_groupID, "RT_" + std::to_string(groupID), conditionUsers)
+						&& updateRecords(db, DB::tableGroups, DB::Groups::col_inrequests, inRequests.toStdString(), conditionGroups) )
+					{
+						userInfoBox->setIcon(QMessageBox::Information);
+						userInfoBox->setText("User request was successfuly sent!");
+
+						requestFlag = true;
+					}
+					else
+					{
+						userInfoBox->setIcon(QMessageBox::Warning);
+						userInfoBox->setText("User request could not be added propperly at database due to unknown issues!");
+
+						requestFlag = false;
+					}
+
+					//Show infoBox
+					userInfoBox->exec();
+
+					// Closing database
+					closeSQLiteDB(db);
+
+					// Returning a true or a false in case the writing request to database was successfully done or not
+					return requestFlag;
+				}
+			}
+			else if (answer == QMessageBox::No) // When Pressing "No" 
+			{
+				return false;
+			}
+
 		}
+		else // Something went wrong and no group was found with 'nameGroup' into groups vector
+		{
+			msgBox.setText("No group was found with name '" + nameGroup + "'");
+			msgBox.setStandardButtons(QMessageBox::Close);
+			msgBox.setIcon(QMessageBox::Warning);
+			msgBox.exec();
+
+			return false;
+		}
+
+
+
 	}
 
 	void leaveGroup()
