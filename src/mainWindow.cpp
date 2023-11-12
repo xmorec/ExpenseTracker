@@ -67,7 +67,7 @@ mainWindow::mainWindow(User* currentUser)
    // When clicking in the Preferences Button, the Preferences Window is shown
    QObject::connect(groupButt, &QPushButton::clicked, [=]() {
        QTimer::singleShot(80, [=]() {
-           //prefWin->adjustWinSize();
+           groupManWin->setFixedSize(groupManWin->sizeHint());
            });
        groupManWin->exec();
        });

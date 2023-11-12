@@ -18,6 +18,13 @@
 #include "iconButton.h"
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Description:                                                                         
+// It manages Group Management (Requests to joinin groups, own group management and edition,
+//  inivitation to users and Group Creation)
+////////////////////////////////////////////////////////////////////////////////////////////
+
+// This struct contains the main parameters of a Group
 struct Group
 {
 	int ID{};
@@ -27,6 +34,16 @@ struct Group
 	QStringList out_requests{};
 	QString status{};
 };
+
+// imageSize is useful to give the main pictures of the QDialog the correct size
+namespace imageSize
+{
+	inline const QSize groupMember { 127, 132 };
+	inline const QSize noGroup { 127, 95 };
+	inline const QSize requestToGroup { 130, 100 };
+	inline const QSize requestFromGroup{ 130, 120 };
+}
+
 
 class groupManWindow : public QDialog
 {
@@ -53,6 +70,10 @@ private:
 	// Information text in Management User section
 	QLabel* infoText{ new QLabel() };
 
+	// Image shown in the middle of Dialog
+	QLabel* imageLabel = new QLabel();
+	QPixmap GroupImage{};
+
 	// Buttons
 	labelButton* createGroupButt{ new labelButton("Create Group")};
 	labelButton* joinGroupButt{ new labelButton("Join to a Group") };
@@ -75,11 +96,12 @@ private:
 	QLabel* newNameLabel { new QLabel("Set a group name:")};
 
 	// Create a Dialog useful to join to any created group
-	//std::unique_ptr<QDialog> join2GroupWin{ std::make_unique<QDialog>() };
 	QDialog* join2GroupWin {new QDialog ()};
 
 public:
 
+	// Constructs the main QDialog window used to manage the group preferences (join, create, leave, or edit a group. 
+	// Also, requesting to be part of a group or invite someone to be part of your group could be performed here)
 	groupManWindow(User* currentUser) : currentUser(currentUser)
 	{
 		setWindowIcon(QIcon(icons::groupPrefIcon));
@@ -92,15 +114,16 @@ public:
 		// Giving a font style to the informating text
 		QFont font(infoText->font().family(), 11, QFont::Bold);
 		infoText->setFont(font);
+		infoText->setAlignment(Qt::AlignCenter);
 
 		mainVLay->addWidget(infoText, 0, Qt::AlignCenter | Qt::AlignTop);
 
-		// Adding the Logging Image
-		QLabel* imageLabel = new QLabel();
-		QPixmap noGroupImage(icons::noGroupfIcon);
-		imageLabel->setPixmap(noGroupImage.scaled(QSize(127, 100)));
+		// Adding the Logging Image		
+		GroupImage = icons::noGroupfIcon;
+		imageLabel->setPixmap(GroupImage.scaled(imageSize::noGroup));
 		mainVLay->addWidget(imageLabel, 0, Qt::AlignCenter);
 
+		// Adding all labels and buttons and layouts into the main QDialog
 		mainVLay->addWidget(createGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);		
 		newNameLay->addWidget(newNameLabel, 0, Qt::AlignRight);
 		newNameLay->addWidget(newNameLineEdit, 0, Qt::AlignLeft);
@@ -119,11 +142,8 @@ public:
 		mainVLay->addLayout(saveCancelLay);
 		saveCancelLay->setAlignment(Qt::AlignCenter);
 
-		// Select and load proper view according the group status of logged user
-		selectView();
-
+		// Setting the layout shown in the main QDialog window
 		setLayout(mainVLay);
-
 
 		// Load all groups from DB
 		loadGroupsFromDB();
@@ -134,10 +154,13 @@ public:
 		join2GroupWin->setWindowIcon(QIcon(icons::groupPrefIcon));
 		
 		QGroupBox* Join2GroupBox = new QGroupBox("Join to a Group");
-		//Join2GroupBox->setFixedWidth(150);
+
+		// A vector that contains each group as a labelButton is created
 		std::vector<labelButton*> nameGroup{};
 
 		auto vLayGroups{ new QVBoxLayout() };
+
+		// For each active group, a labelButton is created and added to the layout
 		for (Group* group : groups)
 		{
 			if (group->status == DB::Groups::status_active) // just adding the active groups
@@ -156,6 +179,11 @@ public:
 		/* ****************************************************************  */
 		
 
+		// Select and load proper view according the group status of logged user
+		selectView();
+
+
+		// Generate the lambda functions when pressing buttons
 		QObject::connect(createGroupButt, &QPushButton::clicked, [=]() {
 			loadCreateGroupSection();
 			 });
@@ -165,7 +193,7 @@ public:
 			});
 
 		QObject::connect(removeReqButt, &QPushButton::clicked, [=]() {
-
+			removeRequest();
 			});
 
 		QObject::connect(inviteUserButt, &QPushButton::clicked, [=]() {
@@ -196,42 +224,53 @@ public:
 			selectView();
 			});
 
+		// For each group, a label button is created and connected to a signal
 		for (labelButton*& groupReq : nameGroup)
 		{
 			QObject::connect(groupReq, &QPushButton::clicked, [=]() {				
-				bool requestFlag{ joinRequest(groupReq->text()) };
-				
-				if (requestFlag == true)
+			
+				if (joinRequest(groupReq->text())) // When join request is successfully done
 				{
 					join2GroupWin->close();
 				}
 
 				selectView();
-
-				});
+			});
 		}
 
 	}
 
 
+	// Selects a view according whether the user is member of a group or not, and taking into account if he/she sent or received a request
+	// to join to a group.
 	void selectView()
-	{
-		newNameLineEdit->setText("");
+	{		
 
-		// In case the User has no group
-		if (currentUser->getGroupID().toInt() == DB::NO_GROUP)
+		if (currentUser->getGroupID().startsWith(DB::REQTO_TAG)) // In case the User has requested to be in a group
 		{
-			loadNoGroupView();
+			loadRequestSentView();			
+		}		
+		else if (currentUser->getGroupID().startsWith(DB::REQFROM_TAG)) // In case the User has been invited to be part of a group
+		{
+			//loadRequestReceivedView();			
 		}
-		
-		// In case the User has a group
-		if (currentUser->getGroupID().toInt() != DB::NO_GROUP)
+		else if (currentUser->getGroupID().toInt() == DB::NO_GROUP) // In case the User has no group
+		{
+			loadNoGroupView();			
+		}
+		else if (currentUser->getGroupID().toInt() != DB::NO_GROUP) // In case the User has a group
 		{
 			loadGroupView();
 		}
 
+		// Update the Dialog size according the current content
+		QTimer::singleShot(20, [=]() {
+			setFixedSize(sizeHint());
+		});		
+
 	}
 	
+	// Load the users from Database and load them into 'users' vector
 	void loadUsersFromDB()
 	{
 		// Clearing Users vector in order to get better results
@@ -278,6 +317,7 @@ public:
 		}
 	}
 
+	// Load the groups from Database and load them into 'groups' vector
 	void loadGroupsFromDB()
 	{
 		// Clearing Users vector in order to get better results
@@ -320,8 +360,11 @@ public:
 		}
 	}	
 
+	// Load the section for creating a group
 	void loadCreateGroupSection()
 	{
+		
+		// Show and Hide the widgets regarding this view
 		newNameLabel->show();
 		newNameLineEdit->show();
 		createGroupButt->setVisible(false);
@@ -336,8 +379,17 @@ public:
 		cancelButt->setVisible(true);
 	}
 
+	// Load the view when a user has no group and nor request/invitation
 	void loadNoGroupView()
 	{
+		// Set Image for not belonging to a group
+		GroupImage = icons::noGroupfIcon;
+		imageLabel->setPixmap(GroupImage.scaled(imageSize::noGroup));
+
+		// Reset the Line Edit of a new Group Name
+		newNameLineEdit->setText("");
+
+		// Show and Hide the widgets regarding this view
 		infoText->setText("You are not a member of a group yet");
 		newNameLabel->hide();
 		newNameLineEdit->hide();
@@ -354,9 +406,26 @@ public:
 
 	}
 
+	// Load the view when user is a member of a group
 	void loadGroupView()
 	{
-		infoText->setText("You are a member of a group");
+		QString groupName{"unknown"};
+
+		// Setting the name group of the current logged user
+		auto groupIt{ std::find_if(groups.begin(), groups.end(), [=](Group* group) 	{ return group->ID == currentUser->getGroupID().toInt(); })};		
+		
+		if (groupIt != groups.end())
+		{
+			groupName = (*groupIt)->name;
+		}
+
+		infoText->setText("You are a member of the group\n'" + groupName + "'");
+
+		// Set the image for a user belonging to a group
+		GroupImage = icons::groupPrefIcon;
+		imageLabel->setPixmap(GroupImage.scaled(imageSize::groupMember));
+
+		// Show and Hide the widgets regarding this view
 		newNameLabel->hide();
 		newNameLineEdit->hide();
 		createGroupButt->setVisible(false);
@@ -372,10 +441,55 @@ public:
 
 	}
 
+	// Load the view when user sent a request to join a group
+	void loadRequestSentView()
+	{
+		QString groupName{ "unknown" };
+
+		// Setting the name group of the current logged user
+		QString reqToGroupID { currentUser->getGroupID().sliced(DB::REQTO_TAG.size()) };
+
+		auto groupIt{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->ID == reqToGroupID.toInt(); }) };
+
+		if (groupIt != groups.end())
+		{
+			groupName = (*groupIt)->name;
+		}
+
+		infoText->setText("You requested to join the group\n'" + groupName + "'\nWaiting for a response from this group.");
+
+		// Set the image for a user belonging to a group
+		GroupImage = icons::reqToGroup;
+		imageLabel->setPixmap(GroupImage.scaled(imageSize::requestToGroup));
+
+		// Show and Hide the widgets regarding this view
+		newNameLabel->hide();
+		newNameLineEdit->hide();
+		createGroupButt->setVisible(false);
+		joinGroupButt->setVisible(false);
+		removeReqButt->setVisible(true);
+		inviteUserButt->setVisible(false);
+		requestsButt->setVisible(false);
+		leaveGroupButt->setVisible(false);
+		renameGroupButt->setVisible(false);
+		removeGroupButt->setVisible(false);
+		saveButt->setVisible(false);
+		cancelButt->setVisible(false);
+	}
+
+	// Load the view when user is invited to join a group
+	void loadRequestReceivedView()
+	{
+
+	}
+
+	// User creates a group and he/she is enrolled to it
 	void createGroup()
 	{
+		// Gets the name of the group from the LineEdit
 		QString newGroupName{ newNameLineEdit->text() };
 
+		// Group Name cannot be empty
 		if (newGroupName.isEmpty())
 		{
 			userInfoBox->setText("Group name cannot be empty.");
@@ -402,8 +516,10 @@ public:
 		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
 		{
 
+			// Sets the new Group ID for this group
 			int groupNum{ static_cast<int>(groups.size()) + 1};
 
+			// Creates a vector of values that will be inserted to Database
 			std::vector<std::string> values
 			{
 				std::to_string(static_cast<int>(groupNum)), //ID INTEGER NOT NULL,
@@ -415,25 +531,33 @@ public:
 			};
 
 			// Tries to insert the new User to DB and also adds it to the 'users' vector
-			if (insertRecord(db, DB::tableGroups, values))
+			if (insertRecord(db, DB::tableGroups, values)) // Group could be successfully added to Database
 			{
 				userInfoBox->setIcon(QMessageBox::Information);
 				userInfoBox->setText("New Group Created!");
 
-				groups.push_back(new Group{ groupNum, newGroupName, {currentUser->getUserName()}, {"0"}, {"0"} });
-
-				currentUser->setGroupID(QString::number(groupNum));
-
 				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
 				std::string condition{ DB::Users::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };
-				if (!updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string(groupNum), condition))
+
+				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string(groupNum), condition)) 
+					// Group ID of the user could be added, and the user could not be added to this group
 				{
+					// Adds this new group to the 'groups' vector
+					groups.push_back(new Group{ groupNum, newGroupName, {currentUser->getUserName()}, {"0"}, {"0"} });
+
+					// Sets the new group ID to the current user
+					currentUser->setGroupID(QString::number(groupNum));
+				}
+				else 
+				{
+					// When user could not be added to the group in Database
 					userInfoBox->setIcon(QMessageBox::Warning);
 					userInfoBox->setText("Group was created, however, user could not be enrolled to the group due to unknown issues!");
+					
 				}
 
 			}
-			else
+			else // Group could not be added to Database
 			{
 				userInfoBox->setIcon(QMessageBox::Warning);
 				userInfoBox->setText("Group could not be created!");
@@ -448,10 +572,13 @@ public:
 		selectView();
 	}
 
-
+	// Creates a join request to a group according the input parameter 'nameGroup'. Returns true if request is done, returns false if it is not.
 	bool joinRequest(const QString& nameGroup)
 	{
+		// groupID will be useful to write/read information to Database
 		int groupID{ DB::NO_GROUP };
+
+		// Trying to search which is the group of 'groups' vector that matches with the group name 'nameGroup'
 		auto id_search{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->name == nameGroup; }) };
 
 		QMessageBox msgBox{};
@@ -471,7 +598,7 @@ public:
 
 			groupID = (*id_search)->ID;
 
-			msgBox.setText("Do you want to request to join group '" + nameGroup + "'");
+			msgBox.setText("Do you want to request to join group '" + nameGroup + "'?");
 			msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 			msgBox.setIcon(QMessageBox::Question);
 			int answer = msgBox.exec();
@@ -481,6 +608,7 @@ public:
 			{
 				sqlite3* db{};
 
+				// Check te availability and opense the Database
 				if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
 				{
 
@@ -508,11 +636,15 @@ public:
 					std::string conditionGroups{ DB::Groups::col_ID + " = '" + std::to_string(groupID) + "'" };
 
 					// Updating in the database (Table Users and Table Groups) the user information for this request:
-					if ( updateRecords(db, DB::tableUsers, DB::Users::col_groupID, "RT_" + std::to_string(groupID), conditionUsers)
+					QString reqGroupID { DB::REQTO_TAG + QString::number(groupID) };
+
+					if ( updateRecords(db, DB::tableUsers, DB::Users::col_groupID, reqGroupID.toStdString(), conditionUsers)
 						&& updateRecords(db, DB::tableGroups, DB::Groups::col_inrequests, inRequests.toStdString(), conditionGroups) )
 					{
 						userInfoBox->setIcon(QMessageBox::Information);
 						userInfoBox->setText("User request was successfuly sent!");
+
+						currentUser->setGroupID(reqGroupID);
 
 						requestFlag = true;
 					}
@@ -533,8 +665,16 @@ public:
 					// Returning a true or a false in case the writing request to database was successfully done or not
 					return requestFlag;
 				}
+				else // In case the Database is not successfully opened
+				{
+					return false;
+				}
 			}
 			else if (answer == QMessageBox::No) // When Pressing "No" 
+			{
+				return false;
+			}
+			else // In case other buttons are pressed
 			{
 				return false;
 			}
@@ -550,10 +690,89 @@ public:
 			return false;
 		}
 
-
-
 	}
 
+	// Removes a request to join a group
+	void removeRequest()
+	{
+		QMessageBox msgBox{};
+		msgBox.setWindowTitle("Remove request");
+		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
+
+		msgBox.setText("Are you sure you want to remove the request?");
+		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msgBox.setIcon(QMessageBox::Question);
+		int answer = msgBox.exec();
+
+		// Declaring, as a std::string, the group ID of the current logged User
+		std::string groupID { currentUser->getGroupID().sliced(DB::REQTO_TAG.size()).toStdString()};
+
+		// When Pressing "Yes" button 
+		if (answer == QMessageBox::Yes)
+		{
+			sqlite3* db{};
+
+			// Check te availability and opense the Database
+			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
+			{
+
+				// Selecting the cell from Groups Table regarding the "in_requests" column in for the selected "group ID"
+				QString inRequests{ getRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0] };
+
+
+				// Removing the user as applicant to this group in database (in_request)
+				if (inRequests.contains(currentUser->getUserName())) // Checks whether the user exists or not as applicant to the group
+				{
+					if (inRequests.startsWith(currentUser->getUserName() + ", ")) // When user is the first who appears requesting to join the group in the list
+					{
+						inRequests.remove(currentUser->getUserName() + ", ");
+					}
+					else if (inRequests.contains(", " + currentUser->getUserName())) // When user is not the first requesting to join the group in the list
+					{
+						inRequests.remove(", " + currentUser->getUserName());
+					}
+					else // This scenario only is possible when the current user is the only applicant to this group
+					{
+						inRequests.clear();
+					}
+				}
+
+				// Setting the condition for updating the "group_id" column (Users Table) for the selected user
+				std::string conditionUsers{ DB::Users::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };
+
+				// Setting the condition for updating "in_requests" column (Groups Table)
+				std::string conditionGroups{ DB::Groups::col_ID + " = '" + groupID + "'" };
+
+				// Updating in the database (Table Users and Table Groups) the user information for this request:
+				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string(DB::NO_GROUP), conditionUsers)
+					&& updateRecords(db, DB::tableGroups, DB::Groups::col_inrequests, inRequests.toStdString(), conditionGroups))
+				{
+					userInfoBox->setIcon(QMessageBox::Information);
+					userInfoBox->setText("User request was removed.");
+
+					currentUser->setGroupID(QString::number(DB::NO_GROUP));
+				}
+				else
+				{
+					userInfoBox->setIcon(QMessageBox::Warning);
+					userInfoBox->setText("User request could not be removed propperly from database due to unknown issues!");
+				}
+
+				//Show infoBox
+				userInfoBox->exec();
+
+				closeSQLiteDB(db);
+			}
+		}
+		else if (answer == QMessageBox::No)
+		{
+			// No action needed.
+		}
+
+		selectView();
+	}
+
+	// User leaves the group he/she is belonging
 	void leaveGroup()
 	{
 

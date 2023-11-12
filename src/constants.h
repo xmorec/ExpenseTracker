@@ -15,6 +15,8 @@ namespace DB
 	inline const std::string tableGroups{ "Groups" };
 
 	inline const int NO_GROUP{ 0 }; // "0" is the non-group value (group ID = 0)
+	inline const QString REQTO_TAG{ "RT_" }; // This is added as a prefix to the group ID related to a group a user sends a request
+	inline const QString REQFROM_TAG{ "RF_" }; // This is added as a prefix to the group ID when user receives a request from a group
 
 	// Return values when accessing to the Database
 	inline const int OPEN_SUCCESS{ 100 }; // Return value when Database and tables exists and also Database could be opened
@@ -67,6 +69,8 @@ namespace icons
 	inline const QString prefIcon{ "resources/icons/preferences.png" };
 	inline const QString groupPrefIcon{ "resources/icons/groupPref2.png" };
 	inline const QString noGroupfIcon{ "resources/icons/no_group.png" };
+	inline const QString reqToGroup{ "resources/icons/reqToGroup.png" };
+	inline const QString reqFromGroup{ "resources/icons/reqFromGroup.png" };
 	inline const QString removeIcon{ "resources/icons/remove_user.png" };
 	inline const QString removeExpense { "resources/icons/remove_expense.png"};
 }
