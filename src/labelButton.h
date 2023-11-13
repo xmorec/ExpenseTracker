@@ -20,6 +20,8 @@ private:
 public:
 	labelButton(const QString& textButton);
 
+	// Setting text label button
+	void setText(const QString& text);
 };
 
 #endif

@@ -79,7 +79,7 @@ private:
 	labelButton* joinGroupButt{ new labelButton("Join to a Group") };
 	labelButton* removeReqButt{ new labelButton("Remove Request") };
 	labelButton* inviteUserButt{ new labelButton("Invite a user to the group") };
-	labelButton* requestsButt{ new labelButton("Requests") };
+	labelButton* requestsButt{ new labelButton("Handle invitations") };
 	labelButton* leaveGroupButt{ new labelButton("Leave the group") };
 	labelButton* renameGroupButt{ new labelButton("Rename group") };
 	labelButton* removeGroupButt{ new labelButton("Remove group") };
@@ -97,6 +97,9 @@ private:
 
 	// Create a Dialog useful to join to any created group
 	QDialog* join2GroupWin {new QDialog ()};
+
+	// Create a Dialog useful to send invitation to a user
+	QDialog* sendInvitationWin{ new QDialog() };
 
 public:
 
@@ -145,6 +148,9 @@ public:
 		// Setting the layout shown in the main QDialog window
 		setLayout(mainVLay);
 
+		// Load all users from DB
+		loadUsersFromDB();
+
 		// Load all groups from DB
 		loadGroupsFromDB();
 
@@ -179,6 +185,42 @@ public:
 		/* ****************************************************************  */
 		
 
+
+		/* ****************************************************************  */
+		//Create a Dialog useful to send invitations to users
+		sendInvitationWin->setWindowTitle("Send invitations");
+		sendInvitationWin->setWindowIcon(QIcon(icons::groupPrefIcon));
+
+		QGroupBox* sendInvBox = new QGroupBox("Send Invitation");
+
+		// A vector that contains each group as a labelButton is created
+		std::vector<labelButton*> userInvLabel{};
+
+		auto vLayUsrs{ new QVBoxLayout() };
+
+		// For each user, a labelButton is created and added to the layout
+		for (User* user : users)
+		{
+			userInvLabel.push_back(new labelButton(user->getUserName()));
+			vLayUsrs->addWidget(userInvLabel.back());
+
+				// If user was previously invited to this group
+				if (user->getGroupID().contains(DB::REQFROM_TAG + user->getGroupID()))
+				{
+					userInvLabel.back()->setText(user->getUserName() + " (Invitation sent)");
+					userInvLabel.back()->setDisabled(true);
+				}
+		}
+
+		sendInvBox->setLayout(vLayUsrs);
+		sendInvitationWin->setLayout(new QVBoxLayout());
+		sendInvitationWin->layout()->addWidget(sendInvBox);
+
+		// Set fixed Dialog size (user cannot resize it)
+		sendInvitationWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
+		/* ****************************************************************  */
+
+
 		// Select and load proper view according the group status of logged user
 		selectView();
 
@@ -197,7 +239,7 @@ public:
 			});
 
 		QObject::connect(inviteUserButt, &QPushButton::clicked, [=]() {
-
+			sendInvitationWin->exec();
 			});
 
 		QObject::connect(requestsButt, &QPushButton::clicked, [=]() {
@@ -224,7 +266,7 @@ public:
 			selectView();
 			});
 
-		// For each group, a label button is created and connected to a signal
+		// For Sending Requests to join a group, a label button is created and connected to a signal for each existing group
 		for (labelButton*& groupReq : nameGroup)
 		{
 			QObject::connect(groupReq, &QPushButton::clicked, [=]() {				
@@ -238,6 +280,13 @@ public:
 			});
 		}
 
+		// For Sending Invitations to request a user to join your group, a label button is created and connected to a signal for each existing user
+		for (labelButton*& userInv : userInvLabel)
+		{
+			QObject::connect(userInv, &QPushButton::clicked, [=]() {
+				sendInvitation(userInv);
+				});
+		}
 	}
 
 
@@ -290,7 +339,7 @@ public:
 				// For every record, a user is read and stored in the Users vector (except from the current User)
 				for (const QStringList& record : records)
 				{
-					if (!(record[0] == currentUser->getUserName())) // No current user
+					if (!(record[0] == currentUser->getUserName())) // Not selecting the current user
 					{
 						// Creating a new User and setting their parameters from the records of Database
 						User* userDB{ new User(record[0]) };
@@ -770,6 +819,31 @@ public:
 		}
 
 		selectView();
+	}
+
+	// Sends an invitation to one specific User
+	void sendInvitation(labelButton* userLabel)
+	{
+		QMessageBox msgBox{};
+		msgBox.setWindowTitle("Send invitation");
+		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
+
+		msgBox.setText("Do you want to send an invitation to this user?");
+		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msgBox.setIcon(QMessageBox::Question);
+		int answer = msgBox.exec();
+
+		// When Pressing "Yes" button 
+		if (answer == QMessageBox::Yes)
+		{
+
+		}
+		else if (answer == QMessageBox::No)
+		{
+
+		}
+
+
 	}
 
 	// User leaves the group he/she is belonging

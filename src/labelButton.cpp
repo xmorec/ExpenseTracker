@@ -20,3 +20,14 @@ labelButton::labelButton(const QString& textButton) : QPushButton(textButton)
 	int widthF = boundingRect.width() + 10;
 	setFixedWidth(widthF);
 }
+
+// Set the text label button
+void labelButton::setText(const QString& text)
+{
+	this->QPushButton::setText(text);
+
+	// Adapting the width button to the text button
+	QRect boundingRect = QFontMetrics(this->font()).boundingRect(this->text());
+	int widthF = boundingRect.width() + 10;
+	setFixedWidth(widthF);
+}
