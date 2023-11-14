@@ -56,6 +56,9 @@
     <ClCompile Include="src\usr_preferences.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\group_management.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\User.h">

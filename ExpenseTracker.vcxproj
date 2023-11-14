@@ -99,6 +99,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="lib\sqlite3.c" />
+    <ClCompile Include="src\group_management.cpp" />
     <ClCompile Include="src\iconButton.cpp" />
     <ClCompile Include="src\labelButton.cpp" />
     <ClCompile Include="src\main.cpp" />
