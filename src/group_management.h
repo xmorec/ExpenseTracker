@@ -172,13 +172,14 @@ public:
 		//Create a Dialog useful to join to any created group
 		createSendRequestsWindow();
 
-		//Create a Dialog useful to send invitations to users (in case the current user is member of a group)
+		//Create a Dialogs depending whether the current user is member of a group or not
 		if (!currentUser->getGroupID().startsWith(DB::REQTO_TAG)) // In case the User has not requested to be in a group
 		{
 			if (currentUser->getGroupID().toInt() > DB::NO_GROUP) // In case the user is member of a group
 			{
 				sqlite3* db{}; // Create database object useful to read the invited users to the group
-				createInvitationWindow(db, true);
+				createInvitationWindow(db, true); //  Create a Dialog useful to send invitations to users (in case the current user is member of a group)
+				createHandleInvReqWindow(db, true); // Create a Dialog usefol to handle sent invitations and accept/decline user requests
 			}
 		}		
 
@@ -321,14 +322,14 @@ public:
 		// Check the users that has been already invited to this group
 		QString outRequests{}; // This QString will contain the list of users that already received an invitation
 
+		// Declaring the groupID of the current User sending the invitation
+		std::string groupID{ currentUser->getGroupID().toStdString() };
+
 		if (dbOpen) // Database is requested to be opened and checked
 		{
 			// Check te availability and opens the Database
 			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
-			{
-				// Declaring the groupID of the current User sending the invitation
-				std::string groupID{ currentUser->getGroupID().toStdString() };
-
+			{			
 				// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
 				outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
 
@@ -337,9 +338,6 @@ public:
 		}
 		else // Database is already opened and checked and there is no need to do it
 		{
-			// Declaring the groupID of the current User sending the invitation
-			std::string groupID{ currentUser->getGroupID().toStdString() };
-
 			// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
 			outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
 		}
@@ -382,61 +380,74 @@ public:
 	}
 	
 	//Create a Dialog useful to remove invitations or accept/reject received joining requests
-	void createHandleInvReqWindow()
+	void createHandleInvReqWindow(sqlite3* db, bool dbOpen)
 	{
 		handleInvReqWin->setWindowTitle("Handle Invitations and Requests");
 		handleInvReqWin->setWindowIcon(QIcon(icons::groupPrefIcon));
-
-		QGroupBox* sendInvBox = new QGroupBox("Sent Invitations");
-		QGroupBox* sendInvBox = new QGroupBox("Received Requests");
 
 		// Check the users that has been already invited to this group
 		QString outRequests{}; // This QString will contain the list of users that already received an invitation
 		QString inRequests{}; // This QString will contain the list of users that already sent a request
 
-		sqlite3* db {}; // Create Database Object
+		// Declaring the groupID of the current User sending the invitation
+		std::string groupID{ currentUser->getGroupID().toStdString() };
 
-		// Check te availability and opens the Database
-		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
+		if (dbOpen) // Database is requested to be opened and checked
 		{
-			// Declaring the groupID of the current User sending the invitation
-			std::string groupID{ currentUser->getGroupID().toStdString() };
 
+			// Check te availability and opens the Database
+			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
+			{
+				// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
+				outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
+				inRequests = getRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
+
+				closeSQLiteDB(db);
+			}
+		}
+		else // Database is already opened and checked and there is no need to do it
+		{
 			// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
 			outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
 			inRequests = getRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
-
-			closeSQLiteDB(db);
 		}
 
-
-		// A vector that contains each group as a labelButton is created
 		std::vector<labelButton*> userInvLabel{};
+		std::vector<labelButton*> userReqLabel{};
+
+		QGroupBox* sentInvBox = new QGroupBox("Sent Invitations");
+		QGroupBox* receivedReqBox = new QGroupBox("Received Requests");
 
 		auto vLayInvitations{ new QVBoxLayout() };
 		auto vLayRequests{ new QVBoxLayout() };
 
-		// For each user, a labelButton is created and added to the layout
 		for (User* user : users)
 		{
-			userInvLabel.push_back(new labelButton(user->getUserName()));
-			vLayUsrs->addWidget(userInvLabel.back());
-
 			// If user was previously invited to this group
 			if (outRequests.contains(user->getUserName()))
 			{
-				userInvLabel.back()->setText(user->getUserName() + " (Invitation sent)");
-				userInvLabel.back()->setDisabled(true);
+				userInvLabel.push_back(new labelButton(user->getUserName()));
+				vLayInvitations->addWidget(userInvLabel.back());				
+			}
+
+			// If user sent a request to this group
+			if (inRequests.contains(user->getUserName()))
+			{
+				userReqLabel.push_back(new labelButton(user->getUserName()));
+				vLayRequests->addWidget(userInvLabel.back());
 			}
 		}
 
-		sendInvBox->setLayout(vLayUsrs);
-		handleInvReqWin->setLayout(new QVBoxLayout());
-		handleInvReqWin->layout()->addWidget(sendInvBox);
+		sentInvBox->setLayout(vLayInvitations);
+		receivedReqBox->setLayout(vLayRequests);
+		handleInvReqWin->setLayout(new QHBoxLayout());
+		handleInvReqWin->layout()->addWidget(sentInvBox);
+		handleInvReqWin->layout()->addWidget(receivedReqBox);
 
 		// Set fixed Dialog size (user cannot resize it)
 		handleInvReqWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 
+		/*
 		// For Sending Invitations to request a user to join your group, a label button is created and connected to a signal for each existing user
 		for (int pos = 0; pos < userInvLabel.size(); ++pos)
 		{
@@ -449,7 +460,7 @@ public:
 				}
 
 				});
-		}
+		}*/
 	}
 
 	
@@ -735,6 +746,9 @@ public:
 
 					// Generate the invitation window from a Database reading
 					createInvitationWindow(db, false);
+
+					// Generate the handle invitation and received requests window from a Database reading
+					createHandleInvReqWindow(db, false);
 				}
 				else 
 				{
