@@ -124,6 +124,8 @@ private:
 	std::vector<QHBoxLayout*> userInvLay{};
 	std::vector<QHBoxLayout*> userReqLay{};
 
+	QVBoxLayout* vLayInvitations{ new QVBoxLayout() };
+
 public:
 
 	// Constructs the main QDialog window used to manage the group preferences (join, create, leave, or edit a group. 
@@ -375,6 +377,24 @@ public:
 				{
 					userInvLabel[pos]->setText(users[pos]->getUserName() + " (Invitation sent)");
 					userInvLabel[pos]->setDisabled(true);
+
+					// Creating the horizontal layout for the corresponding 'user'
+					userInvLay.push_back(new QHBoxLayout());
+
+					// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the invitations section:
+					userInvLay.back()->addWidget(new QLabel(users[pos]->getUserName()));
+					iconButton* removeInvButt{ new iconButton(QIcon(icons::decline), 15) };
+					userInvLay.back()->addWidget(removeInvButt);
+					vLayInvitations->addLayout(userInvLay.back());
+
+					QObject::connect(removeInvButt, &QPushButton::clicked, [=]() {
+						removeInvitation(users[pos], userInvLay.back());
+
+						// Update the Dialog size according the current content
+						QTimer::singleShot(20, [=]() {
+							handleInvReqWin->resize(handleInvReqWin->sizeHint());
+							});
+						});
 				}
 
 				});
@@ -420,7 +440,7 @@ public:
 		QGroupBox* receivedReqBox = new QGroupBox("Received Requests");
 
 		// In each Box, a VLayout will be added to store each User invitation or request
-		auto vLayInvitations{ new QVBoxLayout() };
+		//auto vLayInvitations{ new QVBoxLayout() };
 		auto vLayRequests{ new QVBoxLayout() };
 
 		// Declaring labels vector. Each position will store the user name
@@ -504,19 +524,12 @@ public:
 			bool removeFlag{ false };
 			QObject::connect(invitation.declineButt, &QPushButton::clicked, [=]() {
 
-				if (removeInvitation(invitation.user))
-				{
-					deleteLayout(userInvLay[pos]);
+				removeInvitation(invitation.user, userInvLay[pos]);
 
-					auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(invitation.user->getUserName()); }) };
-					(*userInvLbl)->setText(invitation.user->getUserName());
-					(*userInvLbl)->setDisabled(false);
-
-					// Update the Dialog size according the current content
-					QTimer::singleShot(20, [=]() {
-						handleInvReqWin->setFixedSize(handleInvReqWin->sizeHint());
-						});					
-				}
+				// Update the Dialog size according the current content
+				QTimer::singleShot(50, [=]() {
+					handleInvReqWin->resize(handleInvReqWin->sizeHint());
+					});
 
 				});
 
@@ -1000,7 +1013,7 @@ public:
 	}
 
 	// Removes a Invitation to a user
-	bool removeInvitation(User* user)
+	void removeInvitation(User* user, QHBoxLayout* userInvLay)
 	{
 		QMessageBox msgBox{};
 		msgBox.setWindowTitle("Remove Invitation");
@@ -1011,13 +1024,13 @@ public:
 		msgBox.setIcon(QMessageBox::Question);
 		int answer = msgBox.exec();
 
+		// Recieves the successful updating state in Database (true) or not (false).
+		bool removeFlag{ false };
+
 		// When Pressing "Yes" button 
 		if (answer == QMessageBox::Yes)
 		{
 			sqlite3* db{};
-
-			// Recieves the successful updating state in Database (true) or not (false).
-			bool removeFlag{ false };
 
 			// Check te availability and opense the Database
 			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
@@ -1049,13 +1062,23 @@ public:
 				closeSQLiteDB(db);				
 			}
 
-			return removeFlag;
-
 		}
 		else // (answer == QMessageBox::No)
 		{
-			return false;
+			// No action needed
 		}
+
+
+		if (removeFlag)
+		{
+			deleteLayout(userInvLay);
+
+			auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
+			(*userInvLbl)->setText(user->getUserName());
+			(*userInvLbl)->setDisabled(false);
+
+		}
+
 	}
 
 	// Sends an invitation to one specific User (returns true for a successful invitation request. False otherwise)
