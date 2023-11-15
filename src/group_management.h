@@ -116,6 +116,14 @@ private:
 	// Create a Dialog useful to handle sent invitations and received requests
 	QDialog* handleInvReqWin{ new QDialog() };
 
+	// A vector that contains each group as a labelButton is created
+	std::vector<labelButton*> userInvLabel{};
+
+	// Declaring HLayouts for each user. Each HLayout for each user will contain Label (user name) and icon buttons
+	// to accept/decline invitations or rquests		
+	std::vector<QHBoxLayout*> userInvLay{};
+	std::vector<QHBoxLayout*> userReqLay{};
+
 public:
 
 	// Constructs the main QDialog window used to manage the group preferences (join, create, leave, or edit a group. 
@@ -312,9 +320,6 @@ public:
 
 		QGroupBox* sendInvBox = new QGroupBox("Send Invitation");
 
-		// A vector that contains each group as a labelButton is created
-		std::vector<labelButton*> userInvLabel{};
-
 		auto vLayUsrs{ new QVBoxLayout() };
 
 		// Check the users that has been already invited to this group
@@ -418,14 +423,9 @@ public:
 		auto vLayInvitations{ new QVBoxLayout() };
 		auto vLayRequests{ new QVBoxLayout() };
 
-		// Declaring HLayouts for each user. Each HLayout for each user will contain Label (user name) and icon buttons
-		// to accept/decline invitations or rquests		
-		std::vector<QHBoxLayout*> userInvLay{};
-		std::vector<QHBoxLayout*> userReqLay{};
-
 		// Declaring labels vector. Each position will store the user name
-		std::vector<QLabel*> userInvLabel{};
-		std::vector<QLabel*> userReqLabel{};
+		std::vector<QLabel*> userInvLabelx{};
+		std::vector<QLabel*> userReqLabelx{};
 
 		// A struct of Button and User is needed to send this user pointer to functions when button is clicked
 		struct invDeclUsr {
@@ -453,13 +453,13 @@ public:
 				userInvLay.push_back(new QHBoxLayout());
 
 				// Creating the Label for the corresponding 'user'
-				userInvLabel.push_back(new QLabel(user->getUserName()));	
+				userInvLabelx.push_back(new QLabel(user->getUserName()));	
 
 				// Creating the 'Decline' icon for the corresponding 'user' and Creating a relationship between the specific button and its user
 				invDeclUsr.push_back({ new iconButton(QIcon(icons::decline), 15), user });
 								
 				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the invitations section:
-				userInvLay.back()->addWidget(userInvLabel.back());
+				userInvLay.back()->addWidget(userInvLabelx.back());
 				userInvLay.back()->addWidget(invDeclUsr.back().declineButt);
 				vLayInvitations->addLayout(userInvLay.back());
 			}
@@ -471,13 +471,13 @@ public:
 				userReqLay.push_back(new QHBoxLayout());
 
 				// Creating the Label for the corresponding 'user'
-				userReqLabel.push_back(new QLabel(user->getUserName()));
+				userReqLabelx.push_back(new QLabel(user->getUserName()));
 
 				// Creating the 'Decline' icon for the corresponding 'user' and Creating a relationship between the specific buttons and its user
 				reqAcceptDecllUsr.push_back({ new iconButton(QIcon(icons::accept), 15), new iconButton(QIcon(icons::decline), 15), user });
 
 				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the requests section:
-				userReqLay.back()->addWidget(userReqLabel.back());				
+				userReqLay.back()->addWidget(userReqLabelx.back());				
 				userReqLay.back()->addWidget(reqAcceptDecllUsr.back().acceptButt);
 				userReqLay.back()->addItem(new QSpacerItem(-10, 10));
 				userReqLay.back()->addWidget(reqAcceptDecllUsr.back().declineButt);
@@ -497,17 +497,54 @@ public:
 		handleInvReqWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 
 
+		int pos{ 0 };
 		// For Removing Invitations sent to users, every Decline button is connected to a signal for each existing user
-		for (const struct invDeclUsr& invitation : invDeclUsr)
+		for (struct invDeclUsr& invitation : invDeclUsr)
 		{
+			bool removeFlag{ false };
 			QObject::connect(invitation.declineButt, &QPushButton::clicked, [=]() {
 
 				if (removeInvitation(invitation.user))
 				{
+					deleteLayout(userInvLay[pos]);
 
+					auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(invitation.user->getUserName()); }) };
+					(*userInvLbl)->setText(invitation.user->getUserName());
+					(*userInvLbl)->setDisabled(false);
+
+					// Update the Dialog size according the current content
+					QTimer::singleShot(20, [=]() {
+						handleInvReqWin->setFixedSize(handleInvReqWin->sizeHint());
+						});					
 				}
 
 				});
+
+			pos++;
+		}
+	}
+
+	// Clears all content from a specific layout
+	void deleteLayout(QHBoxLayout*& layout)
+	{
+		// Check if layout exists
+		if (layout != nullptr)
+		{
+			// Delete all widgets from the layout
+			while (QLayoutItem* item = layout->takeAt(0))
+			{
+				if (QWidget* widget = item->widget())
+				{
+					delete widget;
+				}
+				delete item;
+			}
+
+			// Free memory
+			delete layout;
+
+			// Set the layout pointer to nullptr
+			layout = nullptr;
 		}
 	}
 
