@@ -1,10 +1,10 @@
 ﻿#include "iconButton.h"
 
-iconButton::iconButton(const QIcon& icon) : QPushButton()
+iconButton::iconButton(const QIcon& icon, int size) : QPushButton()
 {
     // Set Icon and Icon Size
     setIcon(icon);
-    setIconSize(22);
+    setIconSize(size);
 
     // Disabling borders and background color of the button when it is pressed. Setting a color when PushButton is in 'hover'
     setStyleSheet("QPushButton:pressed { background-color: none; border: none; } QPushButton:hover { color: green; }");

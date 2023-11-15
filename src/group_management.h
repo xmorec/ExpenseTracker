@@ -412,8 +412,14 @@ public:
 			inRequests = getRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
 		}
 
-		std::vector<labelButton*> userInvLabel{};
-		std::vector<labelButton*> userReqLabel{};
+		// Declaring Labels, Buttons, and HLayouts for each user
+		std::vector<QLabel*> userInvLabel{};
+		std::vector<QLabel*> userReqLabel{};
+		std::vector<iconButton*> invDeclineButt{};
+		std::vector<iconButton*> reqAcceptButt{};
+		std::vector<iconButton*> reqDeclineButt{};
+		std::vector<QHBoxLayout*> userInvLay{};
+		std::vector<QHBoxLayout*> userReqLay{};
 
 		QGroupBox* sentInvBox = new QGroupBox("Sent Invitations");
 		QGroupBox* receivedReqBox = new QGroupBox("Received Requests");
@@ -426,20 +432,48 @@ public:
 			// If user was previously invited to this group
 			if (outRequests.contains(user->getUserName()))
 			{
-				userInvLabel.push_back(new labelButton(user->getUserName()));
-				vLayInvitations->addWidget(userInvLabel.back());				
+				// Creating the horizontal layout for the corresponding 'user'
+				userInvLay.push_back(new QHBoxLayout());
+
+				// Creating the Label for the corresponding 'user'
+				userInvLabel.push_back(new QLabel(user->getUserName()));	
+
+				// Creating the 'Decline' icon for the corresponding 'user'
+				invDeclineButt.push_back(new iconButton(QIcon(icons::expTrackerIcon), 15));
+				
+				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the invitations section:
+				userInvLay.back()->addWidget(userInvLabel.back());
+				userInvLay.back()->addWidget(invDeclineButt.back());
+				vLayInvitations->addLayout(userInvLay.back());
 			}
 
 			// If user sent a request to this group
 			if (inRequests.contains(user->getUserName()))
 			{
-				userReqLabel.push_back(new labelButton(user->getUserName()));
-				vLayRequests->addWidget(userInvLabel.back());
+				// Creating the horizontal layout for the corresponding 'user'
+				userReqLay.push_back(new QHBoxLayout());
+
+				// Creating the Label for the corresponding 'user'
+				userReqLabel.push_back(new QLabel(user->getUserName()));
+
+				// Creating the 'Accept' icon for the corresponding 'user'
+				reqAcceptButt.push_back(new iconButton(QIcon(icons::expTrackerIcon), 15));
+
+				// Creating the 'Decline' icon for the corresponding 'user'
+				reqDeclineButt.push_back(new iconButton(QIcon(icons::expTrackerIcon), 15));
+
+				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the requests section:
+				userReqLay.back()->addWidget(userReqLabel.back());
+				userReqLay.back()->addWidget(reqAcceptButt.back());
+				userReqLay.back()->addWidget(reqDeclineButt.back());
+				vLayRequests->addLayout(userReqLay.back());
 			}
 		}
 
 		sentInvBox->setLayout(vLayInvitations);
+		vLayInvitations->setAlignment(Qt::AlignTop);
 		receivedReqBox->setLayout(vLayRequests);
+		vLayRequests->setAlignment(Qt::AlignTop);
 		handleInvReqWin->setLayout(new QHBoxLayout());
 		handleInvReqWin->layout()->addWidget(sentInvBox);
 		handleInvReqWin->layout()->addWidget(receivedReqBox);

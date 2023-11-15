@@ -17,7 +17,7 @@ class iconButton : public QPushButton
 private:
 
 public:
-	iconButton(const QIcon& icon);
+	iconButton(const QIcon& icon, int size = 22);
 
 	// Setting Icon Size in a faster way than the usual one (QPushButton::setIconSize)
 	void setIconSize(int size);
