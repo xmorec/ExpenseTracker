@@ -124,6 +124,7 @@ private:
 	std::vector<QHBoxLayout*> userInvLay{};
 	std::vector<QHBoxLayout*> userReqLay{};
 
+	// VLayout used to fill all invitations sent to users
 	QVBoxLayout* vLayInvitations{ new QVBoxLayout() };
 
 public:
@@ -347,6 +348,9 @@ public:
 			outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
 		}
 
+		// Trying to search which is the group of 'groups' vector that user sent a request
+		//auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->ID == currentUser->getGroupID().toInt(); }) };
+
 		// For each user, a labelButton is created and added to the layout
 		for (User* user : users)
 		{
@@ -357,6 +361,13 @@ public:
 			if (outRequests.contains(user->getUserName()))
 			{
 				userInvLabel.back()->setText(user->getUserName() + " (Invitation sent)");
+				userInvLabel.back()->setDisabled(true);
+			}
+
+			// If user is a member of the currentUser group
+			if (user->getGroupID() == currentUser->getGroupID())
+			{
+				userInvLabel.back()->setText(user->getUserName() + " (Member of your group)");
 				userInvLabel.back()->setDisabled(true);
 			}
 		}
@@ -389,11 +400,6 @@ public:
 
 					QObject::connect(removeInvButt, &QPushButton::clicked, [=]() {
 						removeInvitation(users[pos], userInvLay.back());
-
-						// Update the Dialog size according the current content
-						QTimer::singleShot(20, [=]() {
-							handleInvReqWin->resize(handleInvReqWin->sizeHint());
-							});
 						});
 				}
 
@@ -521,16 +527,26 @@ public:
 		// For Removing Invitations sent to users, every Decline button is connected to a signal for each existing user
 		for (struct invDeclUsr& invitation : invDeclUsr)
 		{
-			bool removeFlag{ false };
 			QObject::connect(invitation.declineButt, &QPushButton::clicked, [=]() {
 
 				removeInvitation(invitation.user, userInvLay[pos]);
+				});
+			pos++;
+		}
 
-				// Update the Dialog size according the current content
-				QTimer::singleShot(50, [=]() {
-					handleInvReqWin->resize(handleInvReqWin->sizeHint());
-					});
 
+		pos = 0;
+		// For Accepting or Removing user requests to join the currentUser group
+		for (struct reqAcceptDecllUsr& request : reqAcceptDecllUsr)
+		{
+			QObject::connect(request.acceptButt, &QPushButton::clicked, [=]() {
+
+				acceptRequest(request.user, userReqLay[pos]);
+				});
+
+			QObject::connect(request.declineButt, &QPushButton::clicked, [=]() {
+
+				removeRequest(request.user, userReqLay[pos]);
 				});
 
 			pos++;
@@ -958,7 +974,7 @@ public:
 	}
 
 	// Removes a request to join a group
-	void removeRequest()
+	void removeRequest(User* user = nullptr, QHBoxLayout* userReqLay = nullptr)
 	{
 		QMessageBox msgBox{};
 		msgBox.setWindowTitle("Remove request");
@@ -969,6 +985,13 @@ public:
 		msgBox.setIcon(QMessageBox::Question);
 		int answer = msgBox.exec();
 
+		bool removeFlag{ false };
+
+		if (!user) // In case no user is set as input (nullptr)
+		{
+			user = currentUser;
+		}
+
 		// When Pressing "Yes" button 
 		if (answer == QMessageBox::Yes)
 		{
@@ -978,24 +1001,23 @@ public:
 			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
 			{
 
-				// Setting the condition for updating the "group_id" column (Users Table) for the selected user
-				std::string conditionUsers{ DB::Users::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };
-
 				// Trying to search which is the group of 'groups' vector that user sent a request
-				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(currentUser->getUserName()); }) };
+				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
 
 				// Updating in the database (Table Users and Table Groups) the user information for this request
-				if (updateRequestCol(db, currentUser, DB::Groups::col_inrequests, (*group_it), REMOVE_REQUEST))
+				if (updateRequestCol(db, user, DB::Groups::col_inrequests, (*group_it), REMOVE_REQUEST))
 				{
 					userInfoBox->setIcon(QMessageBox::Information);
 					userInfoBox->setText("User request was removed.");
 
-					currentUser->setGroupID(QString::number(DB::NO_GROUP));
+					removeFlag = true;
 				}
 				else
 				{
 					userInfoBox->setIcon(QMessageBox::Warning);
 					userInfoBox->setText("User request could not be removed propperly from database due to unknown issues!");
+
+					removeFlag = false;
 				}
 
 				//Show infoBox
@@ -1006,7 +1028,115 @@ public:
 		}
 		else if (answer == QMessageBox::No)
 		{
-			// No action needed.
+			removeFlag = false;
+		}
+
+		if (removeFlag)
+		{
+			deleteLayout(userReqLay);
+
+
+			//auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
+			//(*userInvLbl)->setText(user->getUserName());
+			//(*userInvLbl)->setDisabled(false);
+
+			// Update the Dialog size according the current content
+			QTimer::singleShot(50, [=]() {
+				handleInvReqWin->resize(handleInvReqWin->sizeHint());
+				});
+
+		}
+
+		selectView();
+	}
+
+	// Removes a request to join a group
+	void acceptRequest(User* user, QHBoxLayout* userReqLay)
+	{
+		QMessageBox msgBox{};
+		msgBox.setWindowTitle("Accept request");
+		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
+
+		msgBox.setText("Are you sure you want to accept the request?");
+		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msgBox.setIcon(QMessageBox::Question);
+		int answer = msgBox.exec();
+
+		bool removeFlag{ false };
+
+		// When Pressing "Yes" button 
+		if (answer == QMessageBox::Yes)
+		{
+			sqlite3* db{};
+
+			// Check te availability and opense the Database
+			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
+			{
+
+				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
+				std::string condition{ DB::Users::col_username + " = '" + user->getUserName().toStdString() + "'" };
+
+				// Trying to search which is the group of 'groups' vector that user sent a request
+				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
+
+				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string((*group_it)->ID), condition))
+					// Group ID of the user could be added, and the user could not be added to this group
+				{
+
+					// Updating in the database (Table Users and Table Groups) the user information for this request
+					if (updateRequestCol(db, user, DB::Groups::col_inrequests, (*group_it), REMOVE_REQUEST))
+					{
+						userInfoBox->setIcon(QMessageBox::Information);
+						userInfoBox->setText("User request was removed.");
+
+						removeFlag = true;
+
+						// Adding the new user to the 'groups' vector
+						(*group_it)->users.append(user->getUserName());						
+
+						// Sets the new group ID to the current user
+						currentUser->setGroupID(QString::number((*group_it)->ID));
+					}
+					else
+					{
+						userInfoBox->setIcon(QMessageBox::Warning);
+						userInfoBox->setText("User request could not be removed propperly from database due to unknown issues!");
+
+						removeFlag = false;
+					}
+				}
+				else
+				{
+					// When user could not be added to the group in Database
+					userInfoBox->setIcon(QMessageBox::Warning);
+					userInfoBox->setText("Group was created, however, user could not be enrolled to the group due to unknown issues!");
+				}
+
+				//Show infoBox
+				userInfoBox->exec();
+
+				closeSQLiteDB(db);
+			}
+		}
+		else if (answer == QMessageBox::No)
+		{
+			removeFlag = false;
+		}
+
+		if (removeFlag)
+		{
+			deleteLayout(userReqLay);
+
+			// Disabling sending invitations to a the new member of your group
+			auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
+			(*userInvLbl)->setText(user->getUserName() + " (Member of your group)");
+			(*userInvLbl)->setDisabled(true);
+
+			// Update the Dialog size according the current content
+			QTimer::singleShot(50, [=]() {
+				handleInvReqWin->resize(handleInvReqWin->sizeHint());
+				});
+
 		}
 
 		selectView();
@@ -1065,7 +1195,7 @@ public:
 		}
 		else // (answer == QMessageBox::No)
 		{
-			// No action needed
+			removeFlag = false;
 		}
 
 
@@ -1076,6 +1206,11 @@ public:
 			auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
 			(*userInvLbl)->setText(user->getUserName());
 			(*userInvLbl)->setDisabled(false);
+
+			// Update the Dialog size according the current content
+			QTimer::singleShot(50, [=]() {
+				handleInvReqWin->resize(handleInvReqWin->sizeHint());
+				});
 
 		}
 
