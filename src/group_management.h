@@ -94,9 +94,11 @@ private:
 	labelButton* requestsButt{ new labelButton("Handle invitations/requests") };
 	labelButton* leaveGroupButt{ new labelButton("Leave the group") };
 	labelButton* renameGroupButt{ new labelButton("Rename group") };
-	labelButton* removeGroupButt{ new labelButton("Remove group") };
+	labelButton* membersButt{ new labelButton("Members") };
+	labelButton* receivedInvButt{ new labelButton("Received Invitations") };
+	//labelButton* removeGroupButt{ new labelButton("Remove group") };
 	labelButton* saveButt{ new labelButton("Save") };
-	labelButton* cancelButt{ new labelButton("Cancel") };
+	labelButton* cancelButt{ new labelButton("Cancel") };	
 
 	// Vertical Layout containing all widgets
 	QVBoxLayout* mainVLay{ new QVBoxLayout() };
@@ -119,6 +121,9 @@ private:
 
 	// Create a Dialog useful to handle sent invitations and received requests
 	QDialog* handleInvReqWin{ new QDialog() };
+
+	// Create a Dialog useful to see received invitations
+	QDialog* receivedInvitationWin{ new QDialog() };
 
 	// A Flag is needed to know wheter creating Dialogs to send invitations or handle invitations/requests
 	bool createdWindowsFlag{ false };
@@ -166,13 +171,15 @@ public:
 		newNameLineEdit->setFixedWidth(130);
 		mainVLay->addLayout(newNameLay);
 		newNameLay->setAlignment(Qt::AlignCenter);
+		mainVLay->addWidget(receivedInvButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(joinGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(removeReqButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(inviteUserButt, 0, Qt::AlignCenter | Qt::AlignTop);
-		mainVLay->addWidget(requestsButt, 0, Qt::AlignCenter | Qt::AlignTop);
+		mainVLay->addWidget(requestsButt, 0, Qt::AlignCenter | Qt::AlignTop);	
+		mainVLay->addWidget(membersButt, 0, Qt::AlignCenter | Qt::AlignTop);
+		mainVLay->addWidget(renameGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);		
 		mainVLay->addWidget(leaveGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
-		mainVLay->addWidget(renameGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
-		mainVLay->addWidget(removeGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
+		//mainVLay->addWidget(removeGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		saveCancelLay->addWidget(saveButt, 0, Qt::AlignRight);
 		saveCancelLay->addWidget(cancelButt, 0, Qt::AlignLeft);		
 		mainVLay->addLayout(saveCancelLay);
@@ -231,9 +238,16 @@ public:
 
 			});
 
-		QObject::connect(removeGroupButt, &QPushButton::clicked, [=]() {
+		QObject::connect(receivedInvButt, &QPushButton::clicked, [=]() {
 
 			});
+
+		QObject::connect(membersButt, &QPushButton::clicked, [=]() {
+			//showMembers();
+			});
+
+		//QObject::connect(removeGroupButt, &QPushButton::clicked, [=]() {
+			//});
 
 		QObject::connect(saveButt, &QPushButton::clicked, [=]() {
 			createGroup();
@@ -686,7 +700,9 @@ public:
 		requestsButt->setVisible(false);
 		leaveGroupButt->setVisible(false);
 		renameGroupButt->setVisible(false);
-		removeGroupButt->setVisible(false);
+		membersButt->setVisible(false);
+		receivedInvButt->setVisible(false);
+		//removeGroupButt->setVisible(false);
 		saveButt->setVisible(true);
 		cancelButt->setVisible(true);
 	}
@@ -712,7 +728,9 @@ public:
 		requestsButt->setVisible(false);
 		leaveGroupButt->setVisible(false);
 		renameGroupButt->setVisible(false);
-		removeGroupButt->setVisible(false);
+		membersButt->setVisible(false);
+		receivedInvButt->setVisible(true);
+		//removeGroupButt->setVisible(false);
 		saveButt->setVisible(false);
 		cancelButt->setVisible(false);
 
@@ -747,7 +765,9 @@ public:
 		requestsButt->setVisible(true);
 		leaveGroupButt->setVisible(true);
 		renameGroupButt->setVisible(true);
-		removeGroupButt->setVisible(false);
+		membersButt->setVisible(true);
+		receivedInvButt->setVisible(false);
+		//removeGroupButt->setVisible(false);
 		saveButt->setVisible(false);
 		cancelButt->setVisible(false);
 
@@ -782,15 +802,11 @@ public:
 		requestsButt->setVisible(false);
 		leaveGroupButt->setVisible(false);
 		renameGroupButt->setVisible(false);
-		removeGroupButt->setVisible(false);
+		membersButt->setVisible(false);
+		receivedInvButt->setVisible(true);
+		//removeGroupButt->setVisible(false);
 		saveButt->setVisible(false);
 		cancelButt->setVisible(false);
-	}
-
-	// Load the view when user is invited to join a group
-	void loadRequestReceivedView()
-	{
-
 	}
 
 	// User creates a group and he/she is enrolled to it
