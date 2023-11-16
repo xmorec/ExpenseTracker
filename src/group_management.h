@@ -110,11 +110,18 @@ private:
 	// Create a Dialog useful to join to any created group
 	QDialog* join2GroupWin {new QDialog ()};
 
+	// A vector that contains one label for each existing group.
+	// This is used to send requests to join a group
+	std::vector<labelButton*> reqToGroupLabel{};
+
 	// Create a Dialog useful to send invitation to a user
 	QDialog* sendInvitationWin{ new QDialog() };
 
 	// Create a Dialog useful to handle sent invitations and received requests
 	QDialog* handleInvReqWin{ new QDialog() };
+
+	// A Flag is needed to know wheter creating Dialogs to send invitations or handle invitations/requests
+	bool createdWindowsFlag{ false };
 
 	// A vector that contains each group as a labelButton is created
 	std::vector<labelButton*> userInvLabel{};
@@ -189,6 +196,7 @@ public:
 			sqlite3* db{}; // Create database object useful to read the invited users to the group
 			createInvitationWindow(db, true); //  Create a Dialog useful to send invitations to users (in case the current user is member of a group)
 			createHandleInvReqWindow(db, true); // Create a Dialog usefol to handle sent invitations and accept/decline user requests
+			createdWindowsFlag = true; // Setting flag to 'true' as both Dialogs are now created
 		}	
 
 		// Select and load proper view according the group status of logged user
@@ -277,9 +285,6 @@ public:
 
 		QGroupBox* Join2GroupBox = new QGroupBox("Join to a Group");
 
-		// A vector that contains each group as a labelButton is created
-		std::vector<labelButton*> nameGroup{};
-
 		auto vLayGroups{ new QVBoxLayout() };
 
 		// For each active group, a labelButton is created and added to the layout
@@ -287,8 +292,8 @@ public:
 		{
 			if (group->status == DB::Groups::status_active) // just adding the active groups
 			{
-				nameGroup.push_back(new labelButton(group->name));
-				vLayGroups->addWidget(nameGroup.back());
+				reqToGroupLabel.push_back(new labelButton(group->name));
+				vLayGroups->addWidget(reqToGroupLabel.back());
 			}
 		}
 
@@ -300,7 +305,7 @@ public:
 		join2GroupWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 
 		// For Sending Requests to join a group, a label button is created and connected to a signal for each existing group
-		for (labelButton*& groupReq : nameGroup)
+		for (labelButton*& groupReq : reqToGroupLabel)
 		{
 			QObject::connect(groupReq, &QPushButton::clicked, [=]() {
 
@@ -853,11 +858,18 @@ public:
 					// Sets the new group ID to the current user
 					currentUser->setGroupID(QString::number(groupNum));
 
-					// Generate the invitation window from a Database reading
-					createInvitationWindow(db, false);
+					// In case windos for Invite users or handle Invitations/Requests is not created yet, both dialogs will be created
+					if (!createdWindowsFlag)
+					{
+						// Generate the invitation window from a Database reading
+						createInvitationWindow(db, false);
 
-					// Generate the handle invitation and received requests window from a Database reading
-					createHandleInvReqWindow(db, false);
+						// Generate the handle invitation and received requests window from a Database reading
+						createHandleInvReqWindow(db, false);
+
+						// Set flag to true
+						createdWindowsFlag = true;
+					}
 				}
 				else 
 				{
@@ -884,8 +896,8 @@ public:
 	// Creates a join request to a group according the input parameter 'nameGroup'. Returns true if request is done, returns false if it is not.
 	bool joinRequest(const QString& nameGroup)
 	{
-		// Trying to search which is the group of 'groups' vector that matches with the group name 'nameGroup'
-		auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->name == nameGroup; }) };
+		// Trying to search which is the group of 'groups' vector that matches with the group name 'nameGroup' and also is an active group
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return (group->name == nameGroup) && (group->status == DB::Groups::status_active); }) };
 
 		QMessageBox msgBox{};
 		msgBox.setWindowTitle("Join group request");
@@ -973,6 +985,99 @@ public:
 
 	}
 
+	// Accepts a request from a user that wants to join the group
+	void acceptRequest(User* user, QHBoxLayout* userReqLay)
+	{
+		QMessageBox msgBox{};
+		msgBox.setWindowTitle("Accept request");
+		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
+
+		msgBox.setText("Are you sure you want to accept the request?");
+		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msgBox.setIcon(QMessageBox::Question);
+		int answer = msgBox.exec();
+
+		bool removeFlag{ false };
+
+		// When Pressing "Yes" button 
+		if (answer == QMessageBox::Yes)
+		{
+			sqlite3* db{};
+
+			// Check te availability and opense the Database
+			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
+			{
+
+				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
+				std::string condition{ DB::Users::col_username + " = '" + user->getUserName().toStdString() + "'" };
+
+				// Trying to search which is the group of 'groups' vector that user sent a request
+				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
+
+				// Updating in the database (Table Users) to set the user group to the one he/she requested
+				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string((*group_it)->ID), condition))
+				{
+
+					// Updating in the database (Table Groups): adding the user to the group and removing him from "In Requests" (col_inrequests)
+					if (updateRequestCol(db, user, DB::Groups::col_inrequests, (*group_it), REMOVE_REQUEST)
+						&& updateRequestCol(db, user, DB::Groups::col_users, (*group_it), ADD_REQUEST))
+					{
+						userInfoBox->setIcon(QMessageBox::Information);
+						userInfoBox->setText("User " + user->getUserRName() + " is now a member of your group.");
+
+						removeFlag = true;
+
+						// Adding the new user to the 'groups' vector
+						(*group_it)->users.append(user->getUserName());
+
+						// Sets the new group ID to the current user
+						currentUser->setGroupID(QString::number((*group_it)->ID));
+					}
+					else
+					{
+						userInfoBox->setIcon(QMessageBox::Warning);
+						userInfoBox->setText("User request could not be approved propperly from database due to unknown issues!");
+
+						removeFlag = false;
+					}
+				}
+				else
+				{
+					// When user could not be added to the group in Database
+					userInfoBox->setIcon(QMessageBox::Warning);
+					userInfoBox->setText("User request could not be approved propperly from database due to unknown issues!");
+				}
+
+				//Show infoBox
+				userInfoBox->exec();
+
+				closeSQLiteDB(db);
+			}
+		}
+		else if (answer == QMessageBox::No)
+		{
+			removeFlag = false;
+		}
+
+		if (removeFlag)
+		{
+			deleteLayout(userReqLay);
+
+			// Disabling sending invitations to a the new member of your group
+			auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
+			(*userInvLbl)->setText(user->getUserName() + " (Member of your group)");
+			(*userInvLbl)->setDisabled(true);
+
+			// Update the Dialog size according the current content
+			QTimer::singleShot(50, [=]() {
+				handleInvReqWin->resize(handleInvReqWin->sizeHint());
+				});
+
+		}
+
+		selectView();
+	}
+
 	// Removes a request to join a group
 	void removeRequest(User* user = nullptr, QHBoxLayout* userReqLay = nullptr)
 	{
@@ -1050,19 +1155,19 @@ public:
 		selectView();
 	}
 
-	// Removes a request to join a group
-	void acceptRequest(User* user, QHBoxLayout* userReqLay)
+	// Sends an invitation to one specific User (returns true for a successful invitation request. False otherwise)
+	bool sendInvitation(labelButton* userLabel, int pos)
 	{
 		QMessageBox msgBox{};
-		msgBox.setWindowTitle("Accept request");
+		msgBox.setWindowTitle("Send invitation");
 		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
 
-		msgBox.setText("Are you sure you want to accept the request?");
+		msgBox.setText("Do you want to send an invitation to this user?");
 		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msgBox.setIcon(QMessageBox::Question);
 		int answer = msgBox.exec();
 
-		bool removeFlag{ false };
+		bool invitationFlag{ false };
 
 		// When Pressing "Yes" button 
 		if (answer == QMessageBox::Yes)
@@ -1072,74 +1177,35 @@ public:
 			// Check te availability and opense the Database
 			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
 			{
-
-				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
-				std::string condition{ DB::Users::col_username + " = '" + user->getUserName().toStdString() + "'" };
-
 				// Trying to search which is the group of 'groups' vector that user sent a request
-				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
+				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->users.contains(currentUser->getUserName()); }) };
 
-				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string((*group_it)->ID), condition))
-					// Group ID of the user could be added, and the user could not be added to this group
+				if (updateRequestCol(db, users[pos], DB::Groups::col_outrequests, (*group_it), ADD_REQUEST))
 				{
-
-					// Updating in the database (Table Users and Table Groups) the user information for this request
-					if (updateRequestCol(db, user, DB::Groups::col_inrequests, (*group_it), REMOVE_REQUEST))
-					{
-						userInfoBox->setIcon(QMessageBox::Information);
-						userInfoBox->setText("User request was removed.");
-
-						removeFlag = true;
-
-						// Adding the new user to the 'groups' vector
-						(*group_it)->users.append(user->getUserName());						
-
-						// Sets the new group ID to the current user
-						currentUser->setGroupID(QString::number((*group_it)->ID));
-					}
-					else
-					{
-						userInfoBox->setIcon(QMessageBox::Warning);
-						userInfoBox->setText("User request could not be removed propperly from database due to unknown issues!");
-
-						removeFlag = false;
-					}
+					userInfoBox->setIcon(QMessageBox::Information);
+					userInfoBox->setText("User invitation was successfuly sent!");
+					invitationFlag = true;
 				}
 				else
 				{
-					// When user could not be added to the group in Database
-					userInfoBox->setIcon(QMessageBox::Warning);
-					userInfoBox->setText("Group was created, however, user could not be enrolled to the group due to unknown issues!");
+					invitationFlag = false;
 				}
 
-				//Show infoBox
-				userInfoBox->exec();
-
 				closeSQLiteDB(db);
+
+				return invitationFlag;
+
+			}
+			else // In case Database is not successfully opened
+			{
+				return false;
 			}
 		}
-		else if (answer == QMessageBox::No)
+		else // (answer == QMessageBox::No)
 		{
-			removeFlag = false;
+			return false;
 		}
 
-		if (removeFlag)
-		{
-			deleteLayout(userReqLay);
-
-			// Disabling sending invitations to a the new member of your group
-			auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
-			(*userInvLbl)->setText(user->getUserName() + " (Member of your group)");
-			(*userInvLbl)->setDisabled(true);
-
-			// Update the Dialog size according the current content
-			QTimer::singleShot(50, [=]() {
-				handleInvReqWin->resize(handleInvReqWin->sizeHint());
-				});
-
-		}
-
-		selectView();
 	}
 
 	// Removes a Invitation to a user
@@ -1214,21 +1280,21 @@ public:
 
 		}
 
-	}
+	}	
 
-	// Sends an invitation to one specific User (returns true for a successful invitation request. False otherwise)
-	bool sendInvitation(labelButton* userLabel, int pos)
+	// User leaves the group he/she is belonging
+	void leaveGroup()
 	{
 		QMessageBox msgBox{};
-		msgBox.setWindowTitle("Send invitation");
+		msgBox.setWindowTitle("Leave the group");
 		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
 
-		msgBox.setText("Do you want to send an invitation to this user?");
+		msgBox.setText("Are you sure you want to leave the group?");
 		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msgBox.setIcon(QMessageBox::Question);
 		int answer = msgBox.exec();
 
-		bool invitationFlag{ false };
+		bool leaveFlag{ false };
 
 		// When Pressing "Yes" button 
 		if (answer == QMessageBox::Yes)
@@ -1237,40 +1303,111 @@ public:
 
 			// Check te availability and opense the Database
 			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
-			{			
-				// Trying to search which is the group of 'groups' vector that user sent a request
+			{
+
+				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
+				std::string condition{ DB::Users::col_username + " = '" + currentUser->getUserName().toStdString() + "'" };
+
+				// Trying to search which is the group of 'groups' vector that user is part of
 				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->users.contains(currentUser->getUserName()); }) };
 				
-				if (updateRequestCol(db, users[pos], DB::Groups::col_outrequests, (*group_it), ADD_REQUEST))
+				// Updating in the database (Table Users) to set the user group to the one he/she requested
+				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string(DB::NO_GROUP), condition))
 				{
-					userInfoBox->setIcon(QMessageBox::Information);
-					userInfoBox->setText("User invitation was successfuly sent!");
-					invitationFlag = true;
+
+					// Updating in the database (Table Groups): adding the user to the group and removing him from "In Requests" (col_inrequests)
+					if (updateRequestCol(db, currentUser, DB::Groups::col_users, (*group_it), REMOVE_REQUEST))
+					{
+						userInfoBox->setIcon(QMessageBox::Information);
+						userInfoBox->setText("You are not longer member of the group.");
+
+						leaveFlag = true;
+
+						// Sets the new group ID to the current user
+						currentUser->setGroupID(QString::number(DB::NO_GROUP));
+
+						// Removing invitation layouts from Handle Invitations/Requests window
+						for (QHBoxLayout* invLay : userInvLay)
+						{
+							deleteLayout(invLay);
+						}
+
+						// Removing request layouts from Handle Invitations/Requests window
+						for (QHBoxLayout* reqLay : userReqLay)
+						{
+							deleteLayout(reqLay);
+						}	
+
+						// Removes the group to the 'groups' vector and disable it in Database in case this group has not other members
+						if ((*group_it)->users.isEmpty())
+						{
+							// Setting the group as inactive in Database and removing all In Requests and Out Requests
+							condition = DB::Groups::col_ID + " = '" + std::to_string((*group_it)->ID) + "'";
+							if (updateRecords(db, DB::tableGroups, DB::Groups::col_status, DB::Groups::status_inactive.toStdString(), condition)
+								&& updateRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "", condition)
+								&& updateRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "", condition))
+							{			
+								// Setting the group as inactive in 'groups' vector
+								(*group_it)->status = DB::Groups::status_inactive;
+
+								// Clearing the In Requests and Out Requests of the group
+								(*group_it)->in_requests.clear();
+								(*group_it)->out_requests.clear();
+
+								// Removing the group as requestable to be joined
+								auto reqLabel_it{ std::find_if(reqToGroupLabel.begin(), reqToGroupLabel.end(), [=](labelButton* reqLabel) {return reqLabel->text() == (*group_it)->name; }) };
+								if (reqLabel_it != reqToGroupLabel.end())
+								{
+									delete (*reqLabel_it);
+								}
+							}
+						}
+
+					}
+					else
+					{
+						userInfoBox->setIcon(QMessageBox::Warning);
+						userInfoBox->setText("You could not be removed from the group propperly from database due to unknown issues!");
+
+						leaveFlag = false;
+					}
 				}
 				else
 				{
-					invitationFlag = false;
+					// When user could not be added to the group in Database
+					userInfoBox->setIcon(QMessageBox::Warning);
+					userInfoBox->setText("You could not be removed from the group propperly from database due to unknown issues!");
 				}
-				
+
+				//Show infoBox
+				userInfoBox->exec();
+
 				closeSQLiteDB(db);
-
-				return invitationFlag;
-
-			}
-			else // In case Database is not successfully opened
-			{
-				return false;
 			}
 		}
-		else // (answer == QMessageBox::No)
+		else if (answer == QMessageBox::No)
 		{
-			return false;
+			leaveFlag = false;
 		}
 
+		if (leaveFlag)
+		{
+
+			// Enabling sending invitations to all users again
+			for (User* user : users)
+			{
+				auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
+				(*userInvLbl)->setText(user->getUserName());
+				(*userInvLbl)->setDisabled(false);
+			}			
+
+		}
+
+		selectView();
 	}
 
-	// User leaves the group he/she is belonging
-	void leaveGroup()
+	// Renaming the group
+	void renameGroup()
 	{
 
 	}
