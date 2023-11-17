@@ -265,7 +265,6 @@ public:
 			});
 	}
 
-
 	// Selects a view according whether the user is member of a group or not, and taking into account if he/she sent or received a request
 	// to join to a group.
 	void selectView()
@@ -405,13 +404,12 @@ public:
 
 			QObject::connect(invitation.declineButt, &QPushButton::clicked, [=]() {
 
-				removeInvitation(currentUser, invitation.group, groupInvLay[pos]);
+				removeInvitation(currentUser, invitation.group, groupInvLay[pos], receivedInvitationWin);
 				});
 
 			pos++;
 		}
 	}
-
 
 	//Create a Dialog useful to send invitations to users (db is Database object, 'dbOpen' is a flag used to open and check the database)
 	void createInvitationWindow(sqlite3* db, bool dbOpen)
@@ -478,6 +476,9 @@ public:
 		// Set fixed Dialog size (user cannot resize it)
 		sendInvitationWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 
+
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
+
 		// For Sending Invitations to request a user to join your group, a label button is created and connected to a signal for each existing user
 		for (int pos = 0; pos < userInvLabel.size(); ++pos)
 		{
@@ -496,10 +497,13 @@ public:
 					iconButton* removeInvButt{ new iconButton(QIcon(icons::decline), 15) };
 					userInvLay.back()->addWidget(removeInvButt);
 					vLayInvitations->addLayout(userInvLay.back());
+					auto userInvLayRmv{ userInvLay.back() };
 
 					QObject::connect(removeInvButt, &QPushButton::clicked, [=]() {
-						auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
-						removeInvitation(users[pos], (*group_it), userInvLay.back());
+						
+						//auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
+						//removeInvitation(users[pos], (*group_it), userInvLayRmv, handleInvReqWin);
+						removeInvitation(users[pos], (*(std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }))), userInvLayRmv, handleInvReqWin);
 						});
 				}
 
@@ -630,7 +634,7 @@ public:
 			QObject::connect(invitation.declineButt, &QPushButton::clicked, [=]() {
 				// Remove Invitation sent to the user for the current user group
 				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
-				removeInvitation(invitation.user, (*group_it), userInvLay[pos]);
+				removeInvitation(invitation.user, (*group_it), userInvLay[pos], handleInvReqWin);
 				});
 			pos++;
 		}
@@ -1334,21 +1338,50 @@ public:
 				// Updating in the database (Table Users) to set the user group to the one he/she requested
 				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string(group->ID), condition))
 				{
+					// Setting which is the group that user requested to join
+					auto groupRequested { std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->in_requests.contains(currentUser->getUserName()); }) };
 
 					// Updating in the database (Table Groups): adding the user to the group and removing him from "In Requests" (col_inrequests)
-					if (updateRequestCol(db, currentUser, DB::Groups::col_inrequests, group, REMOVE_REQUEST)
-						&& updateRequestCol(db, currentUser, DB::Groups::col_users, group, ADD_REQUEST))
+					if (updateRequestCol(db, currentUser, DB::Groups::col_users, group, ADD_REQUEST))
 					{
-						userInfoBox->setIcon(QMessageBox::Information);
-						userInfoBox->setText("Now you are member of group: " + group->name);
+						// Removing the In Request from the user to another group
+						if (groupRequested != groups.end())
+						{							
+							updateRequestCol(db, currentUser, DB::Groups::col_inrequests, (*groupRequested), REMOVE_REQUEST);
+						}
 
-						acceptFlag = true;
+						// Remove each Invitation sent to this user
+						for (Group* groupx : groups)
+						{
+							if (groupx->out_requests.contains(currentUser->getUserName()))
+							{
+								updateRequestCol(db, currentUser, DB::Groups::col_outrequests, groupx, REMOVE_REQUEST);
+							}
+						}
+
+						// Sets the new group ID to the current user
+						currentUser->setGroupID(QString::number(group->ID));
 
 						// Adding the new user to the 'groups' vector
 						group->users.append(currentUser->getUserName());
 
-						// Sets the new group ID to the current user
-						currentUser->setGroupID(QString::number(group->ID));
+						// In case windos for Invite users or handle Invitations/Requests is not created yet, both dialogs will be created
+						if (!createdWindowsFlag)
+						{
+							// Generate the invitation window from a Database reading
+							createInvitationWindow(db, false);
+
+							// Generate the handle invitation and received requests window from a Database reading
+							createHandleInvReqWindow(db, false);
+
+							// Set flag to true
+							createdWindowsFlag = true;
+						}
+
+						userInfoBox->setIcon(QMessageBox::Information);
+						userInfoBox->setText("Now you are member of group: " + group->name);
+
+						acceptFlag = true;
 					}
 					else
 					{
@@ -1378,11 +1411,17 @@ public:
 
 		if (acceptFlag)
 		{
-			deleteLayout(groupLay);
+			// Clear all Invitation layouts from 'Received Layout Window'
+			for (QHBoxLayout* hLay : groupInvLay)
+			{
+				deleteLayout(hLay);
+			}
+
+			receivedInvitationWin->close();
 
 			// Update the Dialog size according the current content
 			QTimer::singleShot(50, [=]() {
-				handleInvReqWin->resize(handleInvReqWin->sizeHint());
+				receivedInvitationWin->resize(handleInvReqWin->sizeHint());
 				});
 
 		}
@@ -1391,13 +1430,13 @@ public:
 	}
 
 	// Removes a Invitation to a user coming from a specific group
-	void removeInvitation(User* user, Group* group, QHBoxLayout* userInvLay)
+	void removeInvitation(User* user, Group* group, QHBoxLayout* invLay, QDialog* inWindow)
 	{
 		QMessageBox msgBox{};
-		msgBox.setWindowTitle("Remove Invitation");
+		msgBox.setWindowTitle("Decline Invitation");
 		msgBox.setWindowIcon(QIcon(icons::groupPrefIcon));
 
-		msgBox.setText("Are you sure you want to remove this invitation?");
+		msgBox.setText("Are you sure you want to decline this invitation?");
 		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 		msgBox.setIcon(QMessageBox::Question);
 		int answer = msgBox.exec();
@@ -1419,8 +1458,6 @@ public:
 				{
 					userInfoBox->setIcon(QMessageBox::Information);
 					userInfoBox->setText("Invitation was removed.");
-
-					currentUser->setGroupID(QString::number(DB::NO_GROUP));
 
 					removeFlag = true;
 				}
@@ -1447,15 +1484,18 @@ public:
 
 		if (removeFlag)
 		{
-			deleteLayout(userInvLay);
+			deleteLayout(invLay);
 
-			auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
-			(*userInvLbl)->setText(user->getUserName());
-			(*userInvLbl)->setDisabled(false);
+			if (inWindow == handleInvReqWin)
+			{
+				auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
+				(*userInvLbl)->setText(user->getUserName());
+				(*userInvLbl)->setDisabled(false);
+			}
 
 			// Update the Dialog size according the current content
 			QTimer::singleShot(50, [=]() {
-				handleInvReqWin->resize(handleInvReqWin->sizeHint());
+				inWindow->resize(inWindow->sizeHint());
 				});
 
 		}
