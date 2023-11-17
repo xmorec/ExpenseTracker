@@ -109,39 +109,64 @@ private:
 	QHBoxLayout* saveCancelLay{ new QHBoxLayout() };
 	QLabel* newNameLabel { new QLabel("Set a group name:")};
 
+	/////////////////////////////////////////////////////////////
 	// Create a Dialog useful to join to any created group
 	QDialog* join2GroupWin {new QDialog ()};
+
+	// Information text in Requesting to join to a group
+	QLabel* join2GroupText { new QLabel() };
 
 	// A vector that contains one label for each existing group.
 	// This is used to send requests to join a group
 	std::vector<labelButton*> reqToGroupLabel{};
-
+	/////////////////////////////////////////////////////////////
+	 
+	/////////////////////////////////////////////////////////////
 	// Create a Dialog useful to send invitation to a user
 	QDialog* sendInvitationWin{ new QDialog() };
 
-	// Create a Dialog useful to handle sent invitations and received requests
-	QDialog* handleInvReqWin{ new QDialog() };
-
-	// Create a Dialog useful to see received invitations
-	QDialog* receivedInvitationWin{ new QDialog() };
-
-	// Declaring HLayouts for each group that sent an invitation to currentUser. Each HLayout for each user will contain Label (group name) and icon buttons
-	// to accept/decline invitations	
-	std::vector<QHBoxLayout*> groupInvLay{};
-
-	// A Flag is needed to know wheter creating Dialogs to send invitations or handle invitations/requests
-	bool createdWindowsFlag{ false };
+	// Information text in Sending invitation window
+	QLabel* sendInvToUsrText{ new QLabel() };
 
 	// A vector that contains each group as a labelButton is created
 	std::vector<labelButton*> userInvLabel{};
+	/////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////
+	// Create a Dialog useful to handle sent invitations and received requests
+	QDialog* handleInvReqWin{ new QDialog() };
+
+	// Information text in Sending invitation Box of Handle Inv/Req window
+	QLabel* handleSentInvText { new QLabel() };
+
+	// Information text in Received Requests Box of Handle Inv/Req window
+	QLabel* handleReceivedReqText { new QLabel() };
 
 	// Declaring HLayouts for each user. Each HLayout for each user will contain Label (user name) and icon buttons
 	// to accept/decline invitations or rquests		
 	std::vector<QHBoxLayout*> userInvLay{};
 	std::vector<QHBoxLayout*> userReqLay{};
+	/////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////
+	// Create a Dialog useful to see received invitations
+	QDialog* receivedInvitationWin{ new QDialog() };
 
 	// VLayout used to fill all invitations sent to users
 	QVBoxLayout* vLayInvitations{ new QVBoxLayout() };
+
+	// Information text in Received Invitations window
+	QLabel* receivedInvText { new QLabel() };
+
+	// Declaring HLayouts for each group that sent an invitation to currentUser. 
+	// Each HLayout for each user will contain QLabel (group name) and icon buttons to accept/decline invitations	
+	std::vector<QHBoxLayout*> groupInvLay{};
+	/////////////////////////////////////////////////////////////
+
+	// A Flag is needed to know wheter creating Dialogs to send invitations or handle invitations/requests
+	bool createdWindowsFlag{ false };
+
+
 
 public:
 
@@ -208,13 +233,13 @@ public:
 		if (currentUser->getGroupID().toInt() != DB::NO_GROUP)
 		{
 			sqlite3* db{}; // Create database object useful to read the invited users to the group
-			createInvitationWindow(db, true); //  Create a Dialog useful to send invitations to users (in case the current user is member of a group)
-			createHandleInvReqWindow(db, true); // Create a Dialog usefol to handle sent invitations and accept/decline user requests
+			createInvitationWindow(); //  Create a Dialog useful to send invitations to users (in case the current user is member of a group)
+			createHandleInvReqWindow(); // Create a Dialog usefol to handle sent invitations and accept/decline user requests
 			createdWindowsFlag = true; // Setting flag to 'true' as both Dialogs are now created
 		}	
 
 		// Select and load proper view according the group status of logged user
-		selectView();
+		selectView();		
 
 		// Generate the lambda functions when pressing buttons
 		QObject::connect(createGroupButt, &QPushButton::clicked, [=]() {
@@ -305,7 +330,12 @@ public:
 
 		QGroupBox* Join2GroupBox = new QGroupBox("Join to a Group");
 
-		auto vLayGroups{ new QVBoxLayout() };
+		// Box which contains each group
+		QVBoxLayout* vLayGroups{ new QVBoxLayout() };
+
+		// Adding the information text to the main layout
+		join2GroupText->setText("There are no existing groups.");
+		vLayGroups->addWidget(join2GroupText);
 
 		// For each active group, a labelButton is created and added to the layout
 		for (Group* group : groups)
@@ -315,6 +345,12 @@ public:
 				reqToGroupLabel.push_back(new labelButton(group->name));
 				vLayGroups->addWidget(reqToGroupLabel.back());
 			}
+		}
+
+		// Checking if there is any existing active group
+		if (reqToGroupLabel.size() > 0)
+		{
+			join2GroupText->hide();
 		}
 
 		Join2GroupBox->setLayout(vLayGroups);
@@ -351,11 +387,16 @@ public:
 		// A VLayout is created which will contain all groups that sent an invitation to the current user
 		auto vLayGroups{ new QVBoxLayout() };
 
+		// Adding the info text for this window
+		receivedInvText->setText("There are no received group\ninvitations for the moment.");
+		receivedInvText->setAlignment(Qt::AlignCenter);
+		vLayGroups->addWidget(receivedInvText);
 
 		// A struct of Button and User is needed to send this user pointer to functions when button is clicked
 		struct invAcceptDeclGroup {
 			iconButton* acceptButt{ nullptr };
 			iconButton* declineButt{ nullptr };
+			QHBoxLayout* invLay{ nullptr };
 			Group* group{ nullptr };
 		};
 
@@ -373,17 +414,24 @@ public:
 				groupInvLay.back()->addWidget(new QLabel(group->name));
 
 				// Creating the 'Accept' and 'Decline' icon for the corresponding 'group' and Creating a relationship between the specific buttons and this group
-				invAcceptDeclGroup.push_back({ new iconButton(QIcon(icons::accept), 15), new iconButton(QIcon(icons::decline), 15), group });
+				invAcceptDeclGroup.push_back({ new iconButton(QIcon(icons::accept), 15), new iconButton(QIcon(icons::decline), 15), groupInvLay.back(), group });
 
 				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the requests section:
-				//groupInvLay.back()->addWidget(userReqLabelx.back());
 				groupInvLay.back()->addWidget(invAcceptDeclGroup.back().acceptButt);
 				//groupInvLay.back()->addItem(new QSpacerItem(-10, 10));
 				groupInvLay.back()->addWidget(invAcceptDeclGroup.back().declineButt);
 				vLayGroups->addLayout(groupInvLay.back());
-
 			}
 		}
+
+		// In case there are groups that sent an invitation to the currentUser
+		if (groupInvLay.size() > 0)
+		{
+			receivedInvText->hide();
+		}
+
+		// Setting Button Text for the Received Invitations button according the number of input group invitations 
+		receivedInvButt->setText(receivedInvButt->text() + " (" + QString::number(groupInvLay.size()) + ")");
 
 		recievedInvBox->setLayout(vLayGroups);
 		receivedInvitationWin->setLayout(new QVBoxLayout());
@@ -393,60 +441,37 @@ public:
 		receivedInvitationWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 
 		// For Accepting/Denying Invitations to join a group, accept/deny buttons are connected to a signal for each existing group
-		int pos{ 0 };
-		// For Accepting or Denying group invitation
 		for (struct invAcceptDeclGroup& invitation : invAcceptDeclGroup)
 		{
 			QObject::connect(invitation.acceptButt, &QPushButton::clicked, [=]() {
 
-				acceptInvitation(invitation.group, groupInvLay[pos]);
+				acceptInvitation(invitation.group, invitation.invLay);
 				});
 
 			QObject::connect(invitation.declineButt, &QPushButton::clicked, [=]() {
 
-				removeInvitation(currentUser, invitation.group, groupInvLay[pos], receivedInvitationWin);
+				removeInvitation(currentUser, invitation.group, invitation.invLay, receivedInvitationWin);
 				});
-
-			pos++;
 		}
 	}
 
 	//Create a Dialog useful to send invitations to users (db is Database object, 'dbOpen' is a flag used to open and check the database)
-	void createInvitationWindow(sqlite3* db, bool dbOpen)
+	void createInvitationWindow()
 	{
-
 		sendInvitationWin->setWindowTitle("Send invitations");
 		sendInvitationWin->setWindowIcon(QIcon(icons::groupPrefIcon));
 
 		QGroupBox* sendInvBox = new QGroupBox("Send Invitation");
 
+		// Box that will contain all possible users to send an invitation
 		auto vLayUsrs{ new QVBoxLayout() };
 
-		// Check the users that has been already invited to this group
-		QString outRequests{}; // This QString will contain the list of users that already received an invitation
+		// Set the information text for this window
+		sendInvToUsrText->setText("There are no existing users\nto send an invitation.");
+		vLayUsrs->addWidget(sendInvToUsrText);
 
-		// Declaring the groupID of the current User sending the invitation
-		std::string groupID{ currentUser->getGroupID().toStdString() };
-
-		if (dbOpen) // Database is requested to be opened and checked
-		{
-			// Check te availability and opens the Database
-			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
-			{			
-				// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
-				outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
-
-				closeSQLiteDB(db);
-			}
-		}
-		else // Database is already opened and checked and there is no need to do it
-		{
-			// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
-			outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
-		}
-
-		// Trying to search which is the group of 'groups' vector that user sent a request
-		//auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->ID == currentUser->getGroupID().toInt(); }) };
+		// Find the current user Group
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [&](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
 
 		// For each user, a labelButton is created and added to the layout
 		for (User* user : users)
@@ -455,7 +480,7 @@ public:
 			vLayUsrs->addWidget(userInvLabel.back());
 
 			// If user was previously invited to this group
-			if (outRequests.contains(user->getUserName()))
+			if ((*group_it)->out_requests.contains(user->getUserName()))
 			{
 				userInvLabel.back()->setText(user->getUserName() + " (Invitation sent)");
 				userInvLabel.back()->setDisabled(true);
@@ -469,15 +494,18 @@ public:
 			}
 		}
 
+		// In case there are existing users to show
+		if (userInvLabel.size() > 0)
+		{
+			sendInvToUsrText->hide();
+		}
+
 		sendInvBox->setLayout(vLayUsrs);
 		sendInvitationWin->setLayout(new QVBoxLayout());
 		sendInvitationWin->layout()->addWidget(sendInvBox);
 
 		// Set fixed Dialog size (user cannot resize it)
 		sendInvitationWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
-
-
-		auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
 
 		// For Sending Invitations to request a user to join your group, a label button is created and connected to a signal for each existing user
 		for (int pos = 0; pos < userInvLabel.size(); ++pos)
@@ -501,8 +529,6 @@ public:
 
 					QObject::connect(removeInvButt, &QPushButton::clicked, [=]() {
 						
-						//auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
-						//removeInvitation(users[pos], (*group_it), userInvLayRmv, handleInvReqWin);
 						removeInvitation(users[pos], (*(std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }))), userInvLayRmv, handleInvReqWin);
 						});
 				}
@@ -513,37 +539,10 @@ public:
 	}
 	
 	//Create a Dialog useful to remove invitations or accept/reject received joining requests
-	void createHandleInvReqWindow(sqlite3* db, bool dbOpen)
+	void createHandleInvReqWindow()
 	{
 		handleInvReqWin->setWindowTitle("Handle Invitations and Requests");
 		handleInvReqWin->setWindowIcon(QIcon(icons::groupPrefIcon));
-
-		// Check the users that has been already invited to this group
-		QString outRequests{}; // This QString will contain the list of users that already received an invitation
-		QString inRequests{}; // This QString will contain the list of users that already sent a request
-
-		// Declaring the groupID of the current User sending the invitation
-		std::string groupID{ currentUser->getGroupID().toStdString() };
-
-		if (dbOpen) // Database is requested to be opened and checked
-		{
-
-			// Check te availability and opens the Database
-			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
-			{
-				// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
-				outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
-				inRequests = getRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
-
-				closeSQLiteDB(db);
-			}
-		}
-		else // Database is already opened and checked and there is no need to do it
-		{
-			// Selecting the cell from Groups Table regarding the "out_requests" or "in_requests" column in for the selected "group ID"
-			outRequests = getRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
-			inRequests = getRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "WHERE " + DB::Groups::col_ID + " = '" + groupID + "'")[0][0];
-		}
 
 		// Declaring a Box for Invitations and a Box for Requests
 		QGroupBox* sentInvBox = new QGroupBox("Sent Invitations");
@@ -560,6 +559,7 @@ public:
 		// A struct of Button and User is needed to send this user pointer to functions when button is clicked
 		struct invDeclUsr {
 			iconButton* declineButt{ nullptr };
+			QHBoxLayout* invLay{ nullptr };
 			User* user { nullptr };
 		};
 
@@ -567,17 +567,29 @@ public:
 		struct reqAcceptDecllUsr {
 			iconButton* acceptButt{ nullptr };
 			iconButton* declineButt{ nullptr };
+			QHBoxLayout* reqLay{ nullptr };
 			User* user{ nullptr };
 		};			
 
 		std::vector<invDeclUsr> invDeclUsr{};
 		std::vector<reqAcceptDecllUsr> reqAcceptDecllUsr{};
 
+		// Set information texts regarding the part of Invitations and Requests
+		handleSentInvText->setText("There are no\ninvitations to show.");
+		handleSentInvText->setAlignment(Qt::AlignCenter);
+		handleReceivedReqText->setText("There are no\nrequests to show.");
+		handleReceivedReqText->setAlignment(Qt::AlignCenter);
+		vLayInvitations->addWidget(handleSentInvText);
+		vLayRequests->addWidget(handleReceivedReqText);				
+
+		// Find the current user Group
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [&](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
+
 		// Each invitation or user request for each user is added to the corresponding group (Invitation or Requests)
 		for (User* user : users)
 		{
 			// If user was previously invited to this group
-			if (outRequests.contains(user->getUserName()))
+			if ((*group_it)->out_requests.contains(user->getUserName()))
 			{
 				// Creating the horizontal layout for the corresponding 'user'
 				userInvLay.push_back(new QHBoxLayout());
@@ -586,7 +598,7 @@ public:
 				userInvLabelx.push_back(new QLabel(user->getUserName()));	
 
 				// Creating the 'Decline' icon for the corresponding 'user' and Creating a relationship between the specific button and its user
-				invDeclUsr.push_back({ new iconButton(QIcon(icons::decline), 15), user });
+				invDeclUsr.push_back({ new iconButton(QIcon(icons::decline), 15), userInvLay.back(), user });
 								
 				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the invitations section:
 				userInvLay.back()->addWidget(userInvLabelx.back());
@@ -595,7 +607,7 @@ public:
 			}
 
 			// If user sent a request to this group
-			if (inRequests.contains(user->getUserName()))
+			if ((*group_it)->in_requests.contains(user->getUserName()))
 			{
 				// Creating the horizontal layout for the corresponding 'user'
 				userReqLay.push_back(new QHBoxLayout());
@@ -604,7 +616,7 @@ public:
 				userReqLabelx.push_back(new QLabel(user->getUserName()));
 
 				// Creating the 'Decline' icon for the corresponding 'user' and Creating a relationship between the specific buttons and its user
-				reqAcceptDecllUsr.push_back({ new iconButton(QIcon(icons::accept), 15), new iconButton(QIcon(icons::decline), 15), user });
+				reqAcceptDecllUsr.push_back({ new iconButton(QIcon(icons::accept), 15), new iconButton(QIcon(icons::decline), 15), userReqLay.back(), user });
 
 				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the requests section:
 				userReqLay.back()->addWidget(userReqLabelx.back());				
@@ -614,6 +626,21 @@ public:
 				vLayRequests->addLayout(userReqLay.back());
 			}
 		}
+
+		// Check if there is any user invitation
+		if (userInvLay.size() > 0)
+		{
+			handleSentInvText->hide();
+		}
+
+		// Check if there is any user request
+		if (userReqLay.size() > 0)
+		{
+			handleReceivedReqText->hide();
+		}
+
+		// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
+		requestsButt->setText(requestsButt->text() + " (" + QString::number(userInvLay.size()) + "/" + QString::number(userReqLay.size()) + ")");
 
 		sentInvBox->setLayout(vLayInvitations);
 		vLayInvitations->setAlignment(Qt::AlignTop);
@@ -626,35 +653,26 @@ public:
 		// Set fixed Dialog size (user cannot resize it)
 		handleInvReqWin->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 
-
-		int pos{ 0 };
 		// For Removing Invitations sent to users, every Decline button is connected to a signal for each existing user
 		for (struct invDeclUsr& invitation : invDeclUsr)
 		{
 			QObject::connect(invitation.declineButt, &QPushButton::clicked, [=]() {
 				// Remove Invitation sent to the user for the current user group
 				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
-				removeInvitation(invitation.user, (*group_it), userInvLay[pos], handleInvReqWin);
+				removeInvitation(invitation.user, (*group_it), invitation.invLay, handleInvReqWin);
 				});
-			pos++;
 		}
 
-
-		pos = 0;
 		// For Accepting or Removing user requests to join the currentUser group
 		for (struct reqAcceptDecllUsr& request : reqAcceptDecllUsr)
 		{
 			QObject::connect(request.acceptButt, &QPushButton::clicked, [=]() {
-
-				acceptRequest(request.user, userReqLay[pos]);
+				acceptRequest(request.user, request.reqLay);
 				});
 
 			QObject::connect(request.declineButt, &QPushButton::clicked, [=]() {
-
-				removeRequest(request.user, userReqLay[pos]);
+				removeRequest(request.user, request.reqLay);
 				});
-
-			pos++;
 		}
 	}
 
@@ -955,7 +973,7 @@ public:
 					// Group ID of the user could be added, and the user could not be added to this group
 				{
 					// Adds this new group to the 'groups' vector
-					groups.push_back(new Group{ groupNum, newGroupName, {currentUser->getUserName()}, {"0"}, {"0"} });
+					groups.push_back(new Group{ groupNum, newGroupName, {currentUser->getUserName()}, {}, {} });
 
 					// Sets the new group ID to the current user
 					currentUser->setGroupID(QString::number(groupNum));
@@ -964,14 +982,55 @@ public:
 					if (!createdWindowsFlag)
 					{
 						// Generate the invitation window from a Database reading
-						createInvitationWindow(db, false);
+						createInvitationWindow();
 
 						// Generate the handle invitation and received requests window from a Database reading
-						createHandleInvReqWindow(db, false);
+						createHandleInvReqWindow();
 
 						// Set flag to true
 						createdWindowsFlag = true;
 					}
+
+					// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
+					QString numberInvReq{ "(" + QString::number(groups.back()->out_requests.size()) + "/" + QString::number(groups.back()->in_requests.size()) + ")"};
+					requestsButt->setText(requestsButt->text().left(requestsButt->text().indexOf('(')) + numberInvReq);
+
+					// Setting which is the group that user requested to join
+					auto groupRequested{ std::find_if(groups.begin(), groups.end(), [=](Group* groupx) {return groupx->in_requests.contains(currentUser->getUserName()); }) };
+
+					// Removing the In Request from the user to another group
+					if (groupRequested != groups.end())
+					{
+						updateRequestCol(db, currentUser, DB::Groups::col_inrequests, (*groupRequested), REMOVE_REQUEST);
+					}
+
+					// Remove each Invitation sent to this user
+					for (Group* groupx : groups)
+					{
+						if (groupx->out_requests.contains(currentUser->getUserName()))
+						{
+							updateRequestCol(db, currentUser, DB::Groups::col_outrequests, groupx, REMOVE_REQUEST);
+						}
+					}
+					
+					// Clear all Invitation layouts from 'Received Layout Window'
+					for (QHBoxLayout* hLay : groupInvLay)
+					{
+						deleteLayout(hLay);
+					}
+					groupInvLay.clear();
+
+					// Set the 'no invitations' text in the "Received Invitations" Window
+					receivedInvText->show();
+
+					// Set the button text of Received Invitation Window showing there are no invitations
+					receivedInvButt->setText(receivedInvButt->text().left(receivedInvButt->text().indexOf('(')) + "(0)");
+
+					// Update the Dialog size according the current content
+					QTimer::singleShot(50, [=]() {
+						receivedInvitationWin->setFixedSize(receivedInvitationWin->sizeHint());
+					});					
+
 				}
 				else 
 				{
@@ -1088,7 +1147,7 @@ public:
 	}
 
 	// Accepts a request from a user that wants to join the group
-	void acceptRequest(User* user, QHBoxLayout* userReqLay)
+	void acceptRequest(User* user, QHBoxLayout* reqLay)
 	{
 		QMessageBox msgBox{};
 		msgBox.setWindowTitle("Accept request");
@@ -1099,7 +1158,10 @@ public:
 		msgBox.setIcon(QMessageBox::Question);
 		int answer = msgBox.exec();
 
-		bool removeFlag{ false };
+		// Trying to search which is the group of 'groups' vector that user sent a request
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
+
+		bool acceptFlag{ false };
 
 		// When Pressing "Yes" button 
 		if (answer == QMessageBox::Yes)
@@ -1113,9 +1175,6 @@ public:
 				// Enrolling the user to the group (set the goup_id for the logged user according the new created group into Database)
 				std::string condition{ DB::Users::col_username + " = '" + user->getUserName().toStdString() + "'" };
 
-				// Trying to search which is the group of 'groups' vector that user sent a request
-				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
-
 				// Updating in the database (Table Users) to set the user group to the one he/she requested
 				if (updateRecords(db, DB::tableUsers, DB::Users::col_groupID, std::to_string((*group_it)->ID), condition))
 				{
@@ -1127,7 +1186,7 @@ public:
 						userInfoBox->setIcon(QMessageBox::Information);
 						userInfoBox->setText("User " + user->getUserRName() + " is now a member of your group.");
 
-						removeFlag = true;
+						acceptFlag = true;
 
 						// Adding the new user to the 'groups' vector
 						(*group_it)->users.append(user->getUserName());
@@ -1140,7 +1199,7 @@ public:
 						userInfoBox->setIcon(QMessageBox::Warning);
 						userInfoBox->setText("User request could not be approved propperly from database due to unknown issues!");
 
-						removeFlag = false;
+						acceptFlag = false;
 					}
 				}
 				else
@@ -1158,18 +1217,32 @@ public:
 		}
 		else if (answer == QMessageBox::No)
 		{
-			removeFlag = false;
+			acceptFlag = false;
 		}
 
-		if (removeFlag)
+		if (acceptFlag)
 		{
-			deleteLayout(userReqLay);
+			// Remove Layout from its vector
+			userReqLay.erase(std::find(userReqLay.begin(), userReqLay.end(), reqLay));
+
+			// Delete the layout content
+			deleteLayout(reqLay);
 
 			// Disabling sending invitations to a the new member of your group
 			auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
 			(*userInvLbl)->setText(user->getUserName() + " (Member of your group)");
 			(*userInvLbl)->setDisabled(true);
 
+			// Check if there are no more user requests
+			if ((*group_it)->in_requests.isEmpty())
+			{
+				handleReceivedReqText->show();
+			}
+
+			// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
+			QString numberInvReq{ "(" + QString::number(userInvLay.size()) + "/" + QString::number((*group_it)->in_requests.size()) + ")" };
+			requestsButt->setText(requestsButt->text().left(requestsButt->text().indexOf('(')) + numberInvReq);
+			
 			// Update the Dialog size according the current content
 			QTimer::singleShot(50, [=]() {
 				handleInvReqWin->resize(handleInvReqWin->sizeHint());
@@ -1181,7 +1254,7 @@ public:
 	}
 
 	// Removes a request to join a group
-	void removeRequest(User* user = nullptr, QHBoxLayout* userReqLay = nullptr)
+	void removeRequest(User* user = nullptr, QHBoxLayout* reqLay = nullptr)
 	{
 		QMessageBox msgBox{};
 		msgBox.setWindowTitle("Remove request");
@@ -1192,12 +1265,18 @@ public:
 		msgBox.setIcon(QMessageBox::Question);
 		int answer = msgBox.exec();
 
-		bool removeFlag{ false };
-
-		if (!user) // In case no user is set as input (nullptr)
+		// In case is the current user who wants to remove his request from main menu (not from Handle Invitations/Requests window)
+		// Note: When no 'user' is sent as input parameter is the case when the current user wants to remove his own joining request
+		if (!user) 
 		{
 			user = currentUser;
 		}
+
+		// Trying to search which is the group of 'groups' vector that user sent a request
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
+
+		// Flag useful to know if the database update was done or not
+		bool removeFlag{ false };
 
 		// When Pressing "Yes" button 
 		if (answer == QMessageBox::Yes)
@@ -1207,9 +1286,6 @@ public:
 			// Check te availability and opense the Database
 			if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS)
 			{
-
-				// Trying to search which is the group of 'groups' vector that user sent a request
-				auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->in_requests.contains(user->getUserName()); }) };
 
 				// Updating in the database (Table Users and Table Groups) the user information for this request
 				if (updateRequestCol(db, user, DB::Groups::col_inrequests, (*group_it), REMOVE_REQUEST))
@@ -1238,14 +1314,22 @@ public:
 			removeFlag = false;
 		}
 
-		if (removeFlag)
+		// Updating Handle Invitations/Request Window (it is not the current user who wanted to remove a request coming from himself)
+		if (removeFlag && user != currentUser)
 		{
-			deleteLayout(userReqLay);
+			// Removing layout from Handle Inv/Req window when is not the current user who wnated to remove a request coming from himself
+			userReqLay.erase(std::find(userReqLay.begin(), userReqLay.end(), reqLay));
+			deleteLayout(reqLay);
 
+			// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
+			QString numberInvReq{ "(" + QString::number((*group_it)->out_requests.size()) + "/" + QString::number((*group_it)->in_requests.size()) + ")" };
+			requestsButt->setText(requestsButt->text().left(requestsButt->text().indexOf('(')) + numberInvReq);
 
-			//auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
-			//(*userInvLbl)->setText(user->getUserName());
-			//(*userInvLbl)->setDisabled(false);
+			// In case there are no more requests to show
+			if ((*group_it)->in_requests.size() == 0)
+			{
+				handleReceivedReqText->show();
+			}
 
 			// Update the Dialog size according the current content
 			QTimer::singleShot(50, [=]() {
@@ -1287,6 +1371,11 @@ public:
 					userInfoBox->setIcon(QMessageBox::Information);
 					userInfoBox->setText("User invitation was successfuly sent!");
 					invitationFlag = true;
+
+					// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
+					QString numberInvReq{ "(" + QString::number((*group_it)->out_requests.size()) + "/" + QString::number((*group_it)->in_requests.size()) + ")" };
+					requestsButt->setText(requestsButt->text().left(requestsButt->text().indexOf('(')) + numberInvReq);
+
 				}
 				else
 				{
@@ -1294,6 +1383,9 @@ public:
 				}
 
 				closeSQLiteDB(db);
+
+				// Hide the info text that tells there are no invitations to users
+				handleSentInvText->hide();				
 
 				return invitationFlag;
 
@@ -1369,17 +1461,17 @@ public:
 						if (!createdWindowsFlag)
 						{
 							// Generate the invitation window from a Database reading
-							createInvitationWindow(db, false);
+							createInvitationWindow();
 
 							// Generate the handle invitation and received requests window from a Database reading
-							createHandleInvReqWindow(db, false);
+							createHandleInvReqWindow();
 
 							// Set flag to true
 							createdWindowsFlag = true;
 						}
 
 						userInfoBox->setIcon(QMessageBox::Information);
-						userInfoBox->setText("Now you are member of group: " + group->name);
+						userInfoBox->setText("Now you are member of group: " + group->name);						
 
 						acceptFlag = true;
 					}
@@ -1416,12 +1508,20 @@ public:
 			{
 				deleteLayout(hLay);
 			}
+			groupInvLay.clear();
 
+			// Set the 'no invitations' text in the "Received Invitations" Window
+			receivedInvText->show();
+
+			// Set the button text of Received Invitation Window showing there are no invitations
+			receivedInvButt->setText(receivedInvButt->text().left(receivedInvButt->text().indexOf('(')) + "(0)");
+
+			// Close Received Invitation Window
 			receivedInvitationWin->close();
 
 			// Update the Dialog size according the current content
 			QTimer::singleShot(50, [=]() {
-				receivedInvitationWin->resize(handleInvReqWin->sizeHint());
+				receivedInvitationWin->setFixedSize(receivedInvitationWin->sizeHint());
 				});
 
 		}
@@ -1429,7 +1529,7 @@ public:
 		selectView();
 	}
 
-	// Removes a Invitation to a user coming from a specific group
+	// Removes a Invitation that user received coming from a specific group
 	void removeInvitation(User* user, Group* group, QHBoxLayout* invLay, QDialog* inWindow)
 	{
 		QMessageBox msgBox{};
@@ -1484,14 +1584,47 @@ public:
 
 		if (removeFlag)
 		{
-			deleteLayout(invLay);
+			
+			if (inWindow == receivedInvitationWin) // Remove received invitation 
+			{
+				// Remove Layout from its vector
+				groupInvLay.erase(std::find(groupInvLay.begin(), groupInvLay.end(), invLay));
 
-			if (inWindow == handleInvReqWin)
+				// Check if there are no more group invitations
+				if (groupInvLay.empty())
+				{
+					receivedInvText->show();
+				}
+
+				receivedInvButt->setText(receivedInvButt->text().left(receivedInvButt->text().indexOf('(')) + "(" + QString::number(groupInvLay.size()) + ")");
+			}
+
+			if (inWindow == handleInvReqWin) // Remove sent invitation
 			{
 				auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
 				(*userInvLbl)->setText(user->getUserName());
 				(*userInvLbl)->setDisabled(false);
+
+				// Remove Layout from its vector
+				userInvLay.erase(std::find(userInvLay.begin(), userInvLay.end(), invLay));
+
+				// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
+				auto group_it{ std::find_if(groups.begin(), groups.end(),[&](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
+
+				// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
+				QString numberInvReq{ "(" + QString::number((*group_it)->out_requests.size()) + "/" + QString::number((*group_it)->in_requests.size()) + ")" };
+				requestsButt->setText(requestsButt->text().left(requestsButt->text().indexOf('(')) + numberInvReq);
+
+				// In case there are no more invitations to show
+				if ((*group_it)->out_requests.size() == 0)
+				{
+					handleSentInvText->show();
+				}
+
 			}
+
+			// Delete the content of the Layout that contains the request/invitation to be pulled off
+			deleteLayout(invLay);
 
 			// Update the Dialog size according the current content
 			QTimer::singleShot(50, [=]() {
@@ -1551,12 +1684,18 @@ public:
 						{
 							deleteLayout(invLay);
 						}
+						userInvLay.clear();
 
 						// Removing request layouts from Handle Invitations/Requests window
 						for (QHBoxLayout* reqLay : userReqLay)
 						{
 							deleteLayout(reqLay);
 						}	
+						userReqLay.clear();
+
+						// Setting the text that there are no invitations or requests to show
+						handleSentInvText->show();
+						handleReceivedReqText->show();
 
 						// Removes the group to the 'groups' vector and disable it in Database in case this group has not other members
 						if ((*group_it)->users.isEmpty())
