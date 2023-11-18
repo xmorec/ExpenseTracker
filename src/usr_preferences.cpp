@@ -974,14 +974,3 @@ void confWindow::restartContents()
 	// Set the fixed windows size
 	setFixedSize(winSize);
 }
-
-// Destructor
-confWindow::~confWindow()
-{
-	// Free 'User' memory from users vector pointers
-	for (User* user : users)
-	{
-		delete user;
-	}
-
-}

@@ -42,16 +42,12 @@ namespace imageSize
 	inline const QSize noGroup { 127, 95 };
 	inline const QSize requestToGroup { 130, 100 };
 	inline const QSize requestFromGroup{ 130, 120 };
+	inline const QSize notification { 15, 15 };
 }
 
 // These constants are useful to add or remove requests/invitations in the Groups Table (database)
 constexpr int ADD_REQUEST{ 0 };
 constexpr int REMOVE_REQUEST{ 1 };
-
-
-//  Adds or removes a user to the requests column (in_requests or out_requests) according the MODE in Database. Returns TRUE (successful Database). False otherwise
-//bool updateRequestCol(sqlite3* db, User* user, const std::string& col_requests, int groupID, int MODE);
-
 
 //  Adds or removes a user to the requests column (in_requests or out_requests) according the MODE in Database. Returns TRUE (successful Database). False otherwise
 bool updateRequestCol(sqlite3* db, User* user, const std::string& col_requests, Group* group, int MODE);
@@ -96,7 +92,6 @@ private:
 	labelButton* renameGroupButt{ new labelButton("Rename group") };
 	labelButton* membersButt{ new labelButton("Members") };
 	labelButton* receivedInvButt{ new labelButton("Received Invitations") };
-	//labelButton* removeGroupButt{ new labelButton("Remove group") };
 	labelButton* saveButt{ new labelButton("Save") };
 	labelButton* cancelButt{ new labelButton("Cancel") };	
 
@@ -163,10 +158,27 @@ private:
 	std::vector<QHBoxLayout*> groupInvLay{};
 	/////////////////////////////////////////////////////////////
 
+	/////////////////////////////////////////////////////////////
+	// Create a Dialog useful to show Members Window
+	QDialog* membersWin{ new QDialog() };
+
+	// Information text in Members Windows
+	QLabel* membersText{ new QLabel() };
+
+	// VLayout used to fill all group members in Members Window
+	QVBoxLayout* vLayMembers{ new QVBoxLayout() };
+
+	// A vector that contains one layout for each member user
+	std::vector<QHBoxLayout*> memberLay{};
+	/////////////////////////////////////////////////////////////
+
+	// Notification images shown when there are invitations or requests to handle
+	QLabel* notificationInvImg{ new QLabel() };
+	QLabel* notificationReqImg{ new QLabel() };
+	QPixmap notImgPix{};
+
 	// A Flag is needed to know wheter creating Dialogs to send invitations or handle invitations/requests
 	bool createdWindowsFlag{ false };
-
-
 
 public:
 
@@ -193,6 +205,13 @@ public:
 		imageLabel->setPixmap(GroupImage.scaled(imageSize::noGroup));
 		mainVLay->addWidget(imageLabel, 0, Qt::AlignCenter);
 
+		// Adding the Notification Image and the layout where they are going to be fit in
+		notImgPix = icons::raisedNews;
+		notificationInvImg->setPixmap(notImgPix.scaled(imageSize::notification));
+		notificationReqImg->setPixmap(notImgPix.scaled(imageSize::notification));
+		QHBoxLayout* receivedInvButtLay{ new QHBoxLayout() };
+		QHBoxLayout* receivedReqButtLay{ new QHBoxLayout() };		
+
 		// Adding all labels and buttons and layouts into the main QDialog
 		mainVLay->addWidget(createGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);		
 		newNameLay->addWidget(newNameLabel, 0, Qt::AlignRight);
@@ -200,15 +219,24 @@ public:
 		newNameLineEdit->setFixedWidth(130);
 		mainVLay->addLayout(newNameLay);
 		newNameLay->setAlignment(Qt::AlignCenter);
-		mainVLay->addWidget(receivedInvButt, 0, Qt::AlignCenter | Qt::AlignTop);
+
+		receivedInvButtLay->addItem(new QSpacerItem(55, 15, QSizePolicy::Expanding, QSizePolicy::Minimum));
+		receivedInvButtLay->addWidget(notificationInvImg, 0, Qt::AlignRight);
+		receivedInvButtLay->addWidget(receivedInvButt, 0, Qt::AlignCenter);
+		receivedInvButtLay->addItem(new QSpacerItem(55, 15, QSizePolicy::Expanding, QSizePolicy::Minimum));
+		mainVLay->addLayout(receivedInvButtLay);
+
 		mainVLay->addWidget(joinGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(removeReqButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(inviteUserButt, 0, Qt::AlignCenter | Qt::AlignTop);
-		mainVLay->addWidget(requestsButt, 0, Qt::AlignCenter | Qt::AlignTop);	
+
+		receivedReqButtLay->addWidget(notificationReqImg, 0, Qt::AlignRight | Qt::AlignCenter);
+		receivedReqButtLay->addWidget(requestsButt, 0, Qt::AlignCenter | Qt::AlignTop);
+		mainVLay->addLayout(receivedReqButtLay);
+
 		mainVLay->addWidget(membersButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		mainVLay->addWidget(renameGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);		
 		mainVLay->addWidget(leaveGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
-		//mainVLay->addWidget(removeGroupButt, 0, Qt::AlignCenter | Qt::AlignTop);
 		saveCancelLay->addWidget(saveButt, 0, Qt::AlignRight);
 		saveCancelLay->addWidget(cancelButt, 0, Qt::AlignLeft);		
 		mainVLay->addLayout(saveCancelLay);
@@ -234,7 +262,8 @@ public:
 		{
 			sqlite3* db{}; // Create database object useful to read the invited users to the group
 			createInvitationWindow(); //  Create a Dialog useful to send invitations to users (in case the current user is member of a group)
-			createHandleInvReqWindow(); // Create a Dialog usefol to handle sent invitations and accept/decline user requests
+			createHandleInvReqWindow(); // Create a Dialog useful to handle sent invitations and accept/decline user requests
+			createMembersWin(); // Create a Dialog useful to show all group members of the current user group
 			createdWindowsFlag = true; // Setting flag to 'true' as both Dialogs are now created
 		}	
 
@@ -267,7 +296,7 @@ public:
 			});
 
 		QObject::connect(renameGroupButt, &QPushButton::clicked, [=]() {
-
+			loadRenameGroup();
 			});
 
 		QObject::connect(receivedInvButt, &QPushButton::clicked, [=]() {
@@ -275,19 +304,109 @@ public:
 			});
 
 		QObject::connect(membersButt, &QPushButton::clicked, [=]() {
-			//showMembers();
+			membersWin->exec();
 			});
 
-		//QObject::connect(removeGroupButt, &QPushButton::clicked, [=]() {
-			//});
-
 		QObject::connect(saveButt, &QPushButton::clicked, [=]() {
-			createGroup();
+			// Save Button will act in different ways according the user wants to create a group or rename it.
+			if (currentUser->getGroupID().toInt() == DB::NO_GROUP) // When User does not have a group, one is created
+			{
+				createGroup();
+			}
+			else // In case the user is a member of a group, he renames it
+			{
+				renameGroup();
+			}
+
 			});
 
 		QObject::connect(cancelButt, &QPushButton::clicked, [=]() {
 			selectView();
 			});
+	}
+
+
+	// Returns true in case there are Invitations (and user is not member of a group), false otherwise
+	bool getNewsInvStatus()
+	{
+
+		// Trying to search the current User Group
+		auto userGroup_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->ID == currentUser->getGroupID().toInt(); }) };
+
+		// hasGroup = true (User is a member of a group)
+		bool hasGroup{ userGroup_it != groups.end() };
+
+		// Trying to search if there is at least one group that sent an invitation to current User
+		auto groupInv_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->out_requests.contains(currentUser->getUserName()); }) };
+
+		// hasInvitation = true (User received at least one invitation)
+		bool hasInvitation{ groupInv_it != groups.end() };
+
+		if (!hasGroup)
+		{
+			return hasInvitation;
+		}
+		else
+		{
+			return false;
+		}
+
+	}
+
+	// Returns true in case there are InRequests and user is part of a group, false otherwise
+	bool getNewsReqStatus()
+	{
+
+		// Trying to search the current User Group
+		auto userGroup_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->ID == currentUser->getGroupID().toInt(); }) };
+
+		// hasGroup = true (User is a member of a group)
+		bool hasGroup{ userGroup_it != groups.end() };
+
+		// hasRequests = true (User Group received at least one request)
+		bool hasRequests{ hasGroup && ((*userGroup_it)->in_requests.size() > 0) };
+
+		Group* groupxx = (*userGroup_it);
+
+		if (hasGroup)
+		{
+			return hasRequests;
+		}
+		else
+		{
+			return false;
+		}
+
+	}
+
+	// Returns true in case there are Invitations/InRequests, false otherwise
+	bool getNewsStatus()
+	{
+
+		// Trying to search if there is at least one group that sent an invitation to current User
+		auto groupInv_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->out_requests.contains(currentUser->getUserName()); }) };
+
+		// Trying to search the current User Group
+		auto userGroup_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->ID == currentUser->getGroupID().toInt(); }) };
+
+		// hasGroup = true (User is a member of a group)
+		bool hasGroup { userGroup_it != groups.end() };
+
+		// hasInvitation = true (User received at least one invitation)
+		bool hasInvitation { groupInv_it != groups.end() };
+
+		// hasRequests = true (User Group received at least one request)
+		bool hasRequests { hasGroup && (*userGroup_it)->in_requests.size() > 0 };
+
+		if (hasGroup)
+		{
+			return hasRequests;
+		}
+		else
+		{
+			return hasInvitation;
+		}
+
 	}
 
 	// Selects a view according whether the user is member of a group or not, and taking into account if he/she sent or received a request
@@ -418,7 +537,7 @@ public:
 
 				// Setting Label, Icon, and layout regarding the corresponding 'user' to the layout for the requests section:
 				groupInvLay.back()->addWidget(invAcceptDeclGroup.back().acceptButt);
-				//groupInvLay.back()->addItem(new QSpacerItem(-10, 10));
+				groupInvLay.back()->addItem(new QSpacerItem(-10, 10));
 				groupInvLay.back()->addWidget(invAcceptDeclGroup.back().declineButt);
 				vLayGroups->addLayout(groupInvLay.back());
 			}
@@ -428,9 +547,13 @@ public:
 		if (groupInvLay.size() > 0)
 		{
 			receivedInvText->hide();
+			if (currentUser->getGroupID().toInt() == DB::NO_GROUP)
+			{
+				emit raisedNews(); // This signal is sent to update the Group Preferences Icon in the Main Window as showing there are invitations/requests to check.
+			}
 		}
 
-		// Setting Button Text for the Received Invitations button according the number of input group invitations 
+	
 		receivedInvButt->setText(receivedInvButt->text() + " (" + QString::number(groupInvLay.size()) + ")");
 
 		recievedInvBox->setLayout(vLayGroups);
@@ -637,7 +760,8 @@ public:
 		if (userReqLay.size() > 0)
 		{
 			handleReceivedReqText->hide();
-		}
+			emit raisedNews(); // Emiting this signal to change the Group Preferences Icon in the Main Window
+		}	
 
 		// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
 		requestsButt->setText(requestsButt->text() + " (" + QString::number(userInvLay.size()) + "/" + QString::number(userReqLay.size()) + ")");
@@ -674,6 +798,48 @@ public:
 				removeRequest(request.user, request.reqLay);
 				});
 		}
+	}
+
+	// Create Showing Members Window
+	void createMembersWin()
+	{
+		membersWin->setWindowTitle("Group Members");
+		membersWin->setWindowIcon(QIcon(icons::groupPrefIcon));
+
+		// Box which contains a VLayout with all Group Members
+		QGroupBox* membersBox = new QGroupBox("Group members");
+
+		// Find the current user Group
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [&](Group* groupx) {return groupx->ID == currentUser->getGroupID().toInt(); }) };
+
+		// Adding the information text to the main layout
+		membersText->setText("There are no other group\nmembers apart from you.");
+		membersText->setAlignment(Qt::AlignCenter);
+		vLayMembers->addWidget(membersText);
+
+		// For each user, a QLabel is created
+		for (User* user : users)
+		{
+			if ((*group_it)->ID == user->getGroupID().toInt()) // just adding the group member
+			{
+				memberLay.push_back(new QHBoxLayout());
+				memberLay.back()->addWidget(new QLabel(user->getUserName()));
+				vLayMembers->addLayout(memberLay.back());
+			}
+		}
+
+		// In case there are other group members
+		if (memberLay.size() > 0)
+		{
+			membersText->hide();
+		}
+
+		membersBox->setLayout(vLayMembers);
+		membersWin->setLayout(new QVBoxLayout());
+		membersWin->layout()->addWidget(membersBox);
+
+		// Set fixed Dialog size (user cannot resize it)
+		membersBox->setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, true);
 	}
 
 	// Clears all content from a specific layout
@@ -781,6 +947,9 @@ public:
 						record[5]			   // status group
 					} };
 
+					if (groupDB->in_requests[0] == "") groupDB->in_requests.clear();
+					if (groupDB->out_requests[0] == "") groupDB->out_requests.clear();
+
 					// Inserting the Group to the groups vector
 					groups.push_back(groupDB);
 
@@ -792,12 +961,13 @@ public:
 
 	// Load the section for creating a group
 	void loadCreateGroupSection()
-	{
-		
+	{		
 		// Show and Hide the widgets regarding this view
 		newNameLabel->show();
 		newNameLineEdit->show();
 		createGroupButt->setVisible(false);
+		notificationInvImg->setVisible(false);
+		notificationReqImg->setVisible(false);
 		joinGroupButt->setVisible(false);
 		removeReqButt->setVisible(false);
 		inviteUserButt->setVisible(false);
@@ -806,9 +976,20 @@ public:
 		renameGroupButt->setVisible(false);
 		membersButt->setVisible(false);
 		receivedInvButt->setVisible(false);
-		//removeGroupButt->setVisible(false);
 		saveButt->setVisible(true);
 		cancelButt->setVisible(true);
+	}
+
+	// Loas Rename Group View
+	void loadRenameGroup()
+	{
+		// When Renaming a Group, same fields are active as Create Group Section
+		loadCreateGroupSection();
+
+		// Update the Dialog size according the current content
+		QTimer::singleShot(20, [=]() {
+			setFixedSize(sizeHint());
+			});
 	}
 
 	// Load the view when a user has no group and nor request/invitation
@@ -825,6 +1006,8 @@ public:
 		infoText->setText("You are not a member of a group yet");
 		newNameLabel->hide();
 		newNameLineEdit->hide();
+		notificationInvImg->setVisible(getNewsInvStatus());
+		notificationReqImg->setVisible(false);
 		createGroupButt->setVisible(true);
 		joinGroupButt->setVisible(true);
 		removeReqButt->setVisible(false);
@@ -834,7 +1017,6 @@ public:
 		renameGroupButt->setVisible(false);
 		membersButt->setVisible(false);
 		receivedInvButt->setVisible(true);
-		//removeGroupButt->setVisible(false);
 		saveButt->setVisible(false);
 		cancelButt->setVisible(false);
 
@@ -862,6 +1044,8 @@ public:
 		// Show and Hide the widgets regarding this view
 		newNameLabel->hide();
 		newNameLineEdit->hide();
+		notificationInvImg->setVisible(false);
+		notificationReqImg->setVisible(getNewsReqStatus());
 		createGroupButt->setVisible(false);
 		joinGroupButt->setVisible(false);
 		removeReqButt->setVisible(false);
@@ -871,7 +1055,6 @@ public:
 		renameGroupButt->setVisible(true);
 		membersButt->setVisible(true);
 		receivedInvButt->setVisible(false);
-		//removeGroupButt->setVisible(false);
 		saveButt->setVisible(false);
 		cancelButt->setVisible(false);
 
@@ -899,6 +1082,8 @@ public:
 		// Show and Hide the widgets regarding this view
 		newNameLabel->hide();
 		newNameLineEdit->hide();
+		notificationInvImg->setVisible(getNewsInvStatus());
+		notificationReqImg->setVisible(false);
 		createGroupButt->setVisible(false);
 		joinGroupButt->setVisible(false);
 		removeReqButt->setVisible(true);
@@ -945,7 +1130,6 @@ public:
 
 		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
 		{
-
 			// Sets the new Group ID for this group
 			int groupNum{ static_cast<int>(groups.size()) + 1};
 
@@ -960,7 +1144,7 @@ public:
 				DB::Groups::status_active.toStdString() // Setting the status group to active
 			};
 
-			// Tries to insert the new User to DB and also adds it to the 'users' vector
+			// Tries to insert the new group to DB
 			if (insertRecord(db, DB::tableGroups, values)) // Group could be successfully added to Database
 			{
 				userInfoBox->setIcon(QMessageBox::Information);
@@ -986,6 +1170,9 @@ public:
 
 						// Generate the handle invitation and received requests window from a Database reading
 						createHandleInvReqWindow();
+
+						// Generate the Members Window to see all group members in the group
+						createMembersWin();
 
 						// Set flag to true
 						createdWindowsFlag = true;
@@ -1019,6 +1206,24 @@ public:
 						deleteLayout(hLay);
 					}
 					groupInvLay.clear();
+
+					// Since creating a new group deletes all invitations, Group Preferences Icon should notice
+					emit clearedNews(); 
+
+					// Clear all Member Layout 
+					for (QHBoxLayout* mHLay : memberLay)
+					{
+						deleteLayout(mHLay);
+					}
+					memberLay.clear();
+
+					// In Members Window, there is a message there are no other group members (after a group creation)
+					membersText->show();
+
+					// Update the Dialog size according the current content
+					QTimer::singleShot(50, [=]() {
+						membersWin->resize(membersWin->sizeHint());
+						});
 
 					// Set the 'no invitations' text in the "Received Invitations" Window
 					receivedInvText->show();
@@ -1193,6 +1398,14 @@ public:
 
 						// Sets the new group ID to the current user
 						currentUser->setGroupID(QString::number((*group_it)->ID));
+
+						// Adding a Member to Members Window
+						memberLay.push_back(new QHBoxLayout());
+						memberLay.back()->addWidget(new QLabel(user->getUserName()));
+						vLayMembers->addLayout(memberLay.back());
+
+						// Hidint the text that says no other group members exist in the group
+						membersText->hide();
 					}
 					else
 					{
@@ -1237,6 +1450,9 @@ public:
 			if ((*group_it)->in_requests.isEmpty())
 			{
 				handleReceivedReqText->show();
+				
+				// Since creating a new group deletes all invitations, Group Preferences Icon should notice
+				emit clearedNews();
 			}
 
 			// Setting Button Text for the Handle Invitations/Requests button according the number of input user requests 
@@ -1329,6 +1545,9 @@ public:
 			if ((*group_it)->in_requests.size() == 0)
 			{
 				handleReceivedReqText->show();
+
+				// Since creating a new group deletes all invitations, Group Preferences Icon should notice
+				emit clearedNews();
 			}
 
 			// Update the Dialog size according the current content
@@ -1451,6 +1670,12 @@ public:
 							}
 						}
 
+						// After removing the invitations to the user, if the new group has no In_Requests, Group Preferences Icon is updated
+						if (group->in_requests.isEmpty())
+						{
+							emit clearedNews();
+						}
+
 						// Sets the new group ID to the current user
 						currentUser->setGroupID(QString::number(group->ID));
 
@@ -1465,6 +1690,9 @@ public:
 
 							// Generate the handle invitation and received requests window from a Database reading
 							createHandleInvReqWindow();
+
+							// Generate the Members Window to see all group members in the group
+							createMembersWin();
 
 							// Set flag to true
 							createdWindowsFlag = true;
@@ -1594,6 +1822,7 @@ public:
 				if (groupInvLay.empty())
 				{
 					receivedInvText->show();
+					emit clearedNews(); // In the case all invitations are declined, there no more news, so the Group Preferences Icon is updated accordingly
 				}
 
 				receivedInvButt->setText(receivedInvButt->text().left(receivedInvButt->text().indexOf('(')) + "(" + QString::number(groupInvLay.size()) + ")");
@@ -1630,6 +1859,8 @@ public:
 			QTimer::singleShot(50, [=]() {
 				inWindow->resize(inWindow->sizeHint());
 				});
+
+			selectView();
 
 		}
 
@@ -1706,6 +1937,7 @@ public:
 								&& updateRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "", condition)
 								&& updateRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "", condition))
 							{			
+
 								// Setting the group as inactive in 'groups' vector
 								(*group_it)->status = DB::Groups::status_inactive;
 
@@ -1714,14 +1946,23 @@ public:
 								(*group_it)->out_requests.clear();
 
 								// Removing the group as requestable to be joined
-								auto reqLabel_it{ std::find_if(reqToGroupLabel.begin(), reqToGroupLabel.end(), [=](labelButton* reqLabel) {return reqLabel->text() == (*group_it)->name; }) };
+								auto reqLabel_it{ std::find_if(reqToGroupLabel.begin(), reqToGroupLabel.end(), [&](labelButton* reqLabel) {
+									return reqLabel && reqLabel->text() == (*group_it)->name;										
+									}) };
+
 								if (reqLabel_it != reqToGroupLabel.end())
 								{
 									delete (*reqLabel_it);
+									(*reqLabel_it) = nullptr;
 								}
+
+
 							}
 						}
 
+						// When a User leaves the group, he does not have neither invitations nor user requests
+						emit clearedNews();
+						
 					}
 					else
 					{
@@ -1758,8 +1999,7 @@ public:
 				auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
 				(*userInvLbl)->setText(user->getUserName());
 				(*userInvLbl)->setDisabled(false);
-			}			
-
+			}	
 		}
 
 		selectView();
@@ -1768,9 +2008,75 @@ public:
 	// Renaming the group
 	void renameGroup()
 	{
+		// Gets the name of the group from the LineEdit
+		QString newGroupName{ newNameLineEdit->text() };
 
+		// Group Name cannot be empty
+		if (newGroupName.isEmpty())
+		{
+			userInfoBox->setText("Group name cannot be empty.");
+			userInfoBox->setIcon(QMessageBox::Warning);
+			userInfoBox->exec();
+			return;
+		}
+
+		// Trying to search which is the group of 'groups' vector that user sent a request
+		auto group_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) {return group->ID == currentUser->getGroupID().toInt(); }) };
+
+		// Checks if the userName already exists from all other users
+		for (Group* group : groups)
+		{
+			// If the new group name already exists for an active group, a warning pops up
+			if ((newGroupName == group->name) && (group->status == DB::Groups::status_active) && ((*group_it)->ID != group->ID))
+			{
+				userInfoBox->setText("This group name already exists.");
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->exec();
+				return;
+			}
+		}
+
+		sqlite3* db{};
+
+		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
+		{
+
+			// Setting the condition to rename the group name in database
+			std::string condition{ DB::Groups::col_ID + " = '" + currentUser->getGroupID().toStdString() + "'"};
+
+			if (updateRecords(db, DB::tableGroups, DB::Groups::col_group_name, newGroupName.toStdString(), condition))
+			{
+				userInfoBox->setIcon(QMessageBox::Information);
+				userInfoBox->setText("Group Name has been successfuly updated");
+
+				// Updating the name group in the group vector
+				(*group_it)->name = newGroupName;
+
+				infoText->setText("You are a member of the group\n'" + newGroupName + "'");
+
+			}
+			else
+			{
+				// When user could not be added to the group in Database
+				userInfoBox->setIcon(QMessageBox::Warning);
+				userInfoBox->setText("Group Name could not be rewritten in database due to unknown issues!");
+			}
+
+		//Show infoBox
+		userInfoBox->exec();
+
+		closeSQLiteDB(db);
+		}
+
+		selectView();
 	}
 
+	signals:
+		// Emited signal when no other invitations or requests are present
+		void clearedNews();
+
+		// Emited signal when new requests are present because of joining to a group
+		void raisedNews();
 };
 
 

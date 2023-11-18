@@ -144,9 +144,6 @@ public:
 	// Reset the content shown in the Preferences Dialog Window to default
 	void restartContents();
 
-	// Destructor
-	~confWindow();
-
 	signals:
 		// Emited signal when username is changed
 		void userNameMod();	

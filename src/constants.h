@@ -66,7 +66,9 @@ namespace icons
 	inline const QString saveIcon{ "resources/icons/saveIcon.png" };
 	inline const QString prefIcon{ "resources/icons/preferences.png" };
 	inline const QString groupPrefIcon{ "resources/icons/groupPref2.png" };
+	inline const QString groupPrefNewsIcon{ "resources/icons/groupPrefNews.png" };
 	inline const QString noGroupfIcon{ "resources/icons/no_group.png" };
+	inline const QString raisedNews{ "resources/icons/newThing.png" };
 	inline const QString reqToGroup{ "resources/icons/reqToGroup.png" };
 	inline const QString reqFromGroup{ "resources/icons/reqFromGroup.png" };
 	inline const QString removeIcon{ "resources/icons/remove_user.png" };
