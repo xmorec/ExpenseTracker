@@ -1,5 +1,6 @@
 ﻿#include "loggingWindow.h"
 
+
 // Generates the main QDialog for the Logging Session
 loggingWindow::loggingWindow() : QDialog()
 {
@@ -130,6 +131,52 @@ void loggingWindow::loadUsersFromDB()
 	}
 }
 
+// Load the groups from Database and load them into 'groups' vector
+void loggingWindow::loadGroupsFromDB()
+{
+	// Clearing Users vector in order to get better results
+	groups.clear();
+
+	sqlite3* db{};
+
+	// Checks and Open the Database
+	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
+	{
+		//records gets the output of the SELECT query given by 'getRecords()'
+		std::string columns
+		{
+			DB::Groups::col_ID + ", " + DB::Groups::col_group_name + ", " + DB::Groups::col_users + ", " + DB::Groups::col_inrequests + ", " + DB::Groups::col_outrequests + ", " + DB::Groups::col_status
+		};
+		std::vector<QStringList> records{ getRecords(db, DB::tableGroups, columns) };
+
+		// Load the database groups to the Groups vector 'groups' in case they exist in Database
+		if (!records.empty())
+		{
+			// For every record, a group is read and stored in the groups vector
+			for (const QStringList& record : records)
+			{
+
+				Group* groupDB{ new Group {
+					record[0].toInt(),     // Group ID
+					record[1],			   // Group Name	
+					record[2].split(", "), // users in the group
+					record[3].split(", "), // in requests (users)
+					record[4].split(", "), // out requests (users)
+					record[5]			   // status group
+				} };
+
+				if (groupDB->in_requests[0] == "") groupDB->in_requests.clear();
+				if (groupDB->out_requests[0] == "") groupDB->out_requests.clear();
+
+				// Inserting the Group to the groups vector
+				groups.push_back(groupDB);
+
+			}
+		}
+		closeSQLiteDB(db);
+	}
+}
+
 // Execute the Logging In process and Checking
 void loggingWindow::loggingIn()
 {
@@ -156,12 +203,8 @@ void loggingWindow::loggingIn()
 			// In case the password is correct, the Logged User is set accordingly
 			loggedUser = (*userIt);
 
-			// Free 'User' memory from users vector pointers
-			for (User* user : users)
-			{
-				if (user != *userIt)
-					delete user;
-			}
+			// Since logging was successuly done, all groups are loaded from Database
+			loadGroupsFromDB();
 
 			// In case the password is correct, the logging status is set to "true" and QDialog is closed
 			loggingStatus = true;
@@ -356,4 +399,18 @@ bool loggingWindow::getLoggingStatus()
 User* loggingWindow::getCurrentUser()
 {
 	return loggedUser;
+}
+
+// Returns the users vector
+std::vector<User*>& loggingWindow::getUsers()
+{
+	// Users vector that contains all users in the program-system
+	return users;
+}
+
+// Returns the groups vector
+std::vector<Group*>& loggingWindow::getGroups()
+{
+	// Groups vector that contains all users in the program-system
+	return groups;
 }

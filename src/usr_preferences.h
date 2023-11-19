@@ -36,9 +36,12 @@ private:
 	User* currentUser{};
 
 	// Vector storing all Users
-	std::vector<User*> users{};
+	std::vector<User*>& users;
 
-	// Vector storing all Users when initializing preferences window
+	// Vector storing all Groups
+	std::vector<Group*>& groups;
+
+	// Vector storing all Users except for the current one
 	std::vector<User*> usersInit{};
 
 	// Total number of users when initializing preferences window
@@ -94,7 +97,7 @@ private:
 public:
 
 	// Constructs the main Preference Window interface and functiontality
-	confWindow(User* user);
+	confWindow(User* currentUser, std::vector<User*>& users, std::vector<Group*>& groups);
 
 	// Getting the current size of the Preference Window
 	void adjustWinSize();
@@ -119,9 +122,6 @@ public:
 
 	// Disables / Enables the input field (fieldEdit) according a flag (bool disable)
 	void disableFields(bool disable, QLineEdit* fieldEdit);
-
-	//Load Users from DB and store them in 'users' vector	
-	void loadUsersFromDB();
 
 	// Removing user layout from User Management section
 	void removeUser(int pos);

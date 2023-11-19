@@ -24,17 +24,6 @@
 //  inivitation to users and Group Creation)
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-// This struct contains the main parameters of a Group
-struct Group
-{
-	int ID{};
-	QString name{};
-	QStringList users{};
-	QStringList in_requests{};
-	QStringList out_requests{};
-	QString status{};
-};
-
 // imageSize is useful to give the main pictures of the QDialog the correct size
 namespace imageSize
 {
@@ -52,6 +41,9 @@ constexpr int REMOVE_REQUEST{ 1 };
 //  Adds or removes a user to the requests column (in_requests or out_requests) according the MODE in Database. Returns TRUE (successful Database). False otherwise
 bool updateRequestCol(sqlite3* db, User* user, const std::string& col_requests, Group* group, int MODE);
 
+// Deletes a group from Database and from 'groups' vector. Returns true for a successful removing, false otherwise
+bool deleteGroup(sqlite3* db, Group* group, QMessageBox* userInfoBox, bool dbOpen);
+
 
 class groupManWindow : public QDialog
 {
@@ -60,20 +52,17 @@ class groupManWindow : public QDialog
 
 private:
 
-	// Windows Size value
-	QSize winSize{};
+	// Informing QMessageBox
+	QMessageBox* userInfoBox = new QMessageBox();
 
 	// Current Logged User
 	User* currentUser{};
 
 	// Vector storing all Users
-	std::vector<User*> users{};
+	std::vector<User*>& users;
 
 	// Vector storing all Groups
-	std::vector<Group*> groups{};
-
-	// Informing QMessageBox
-	QMessageBox* userInfoBox = new QMessageBox();
+	std::vector<Group*>& groups;
 
 	// Information text in Management User section
 	QLabel* infoText{ new QLabel() };
@@ -184,7 +173,8 @@ public:
 
 	// Constructs the main QDialog window used to manage the group preferences (join, create, leave, or edit a group. 
 	// Also, requesting to be part of a group or invite someone to be part of your group could be performed here)
-	groupManWindow(User* currentUser) : currentUser(currentUser)
+	groupManWindow(User* currentUser, std::vector<User*>& users, std::vector<Group*>& groups) : 
+		currentUser(currentUser), users(users), groups(groups)
 	{
 		setWindowIcon(QIcon(icons::groupPrefIcon));
 		setWindowTitle("Group Management");
@@ -244,12 +234,6 @@ public:
 
 		// Setting the layout shown in the main QDialog window
 		setLayout(mainVLay);
-
-		// Load all users from DB
-		loadUsersFromDB();
-
-		// Load all groups from DB
-		loadGroupsFromDB();
 
 		//Create a Dialog useful to join to any created group
 		createSendRequestsWindow();
@@ -325,7 +309,6 @@ public:
 			});
 	}
 
-
 	// Returns true in case there are Invitations (and user is not member of a group), false otherwise
 	bool getNewsInvStatus()
 	{
@@ -366,8 +349,6 @@ public:
 		// hasRequests = true (User Group received at least one request)
 		bool hasRequests{ hasGroup && ((*userGroup_it)->in_requests.size() > 0) };
 
-		Group* groupxx = (*userGroup_it);
-
 		if (hasGroup)
 		{
 			return hasRequests;
@@ -375,36 +356,6 @@ public:
 		else
 		{
 			return false;
-		}
-
-	}
-
-	// Returns true in case there are Invitations/InRequests, false otherwise
-	bool getNewsStatus()
-	{
-
-		// Trying to search if there is at least one group that sent an invitation to current User
-		auto groupInv_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->out_requests.contains(currentUser->getUserName()); }) };
-
-		// Trying to search the current User Group
-		auto userGroup_it{ std::find_if(groups.begin(), groups.end(), [=](Group* group) { return group->ID == currentUser->getGroupID().toInt(); }) };
-
-		// hasGroup = true (User is a member of a group)
-		bool hasGroup { userGroup_it != groups.end() };
-
-		// hasInvitation = true (User received at least one invitation)
-		bool hasInvitation { groupInv_it != groups.end() };
-
-		// hasRequests = true (User Group received at least one request)
-		bool hasRequests { hasGroup && (*userGroup_it)->in_requests.size() > 0 };
-
-		if (hasGroup)
-		{
-			return hasRequests;
-		}
-		else
-		{
-			return hasInvitation;
 		}
 
 	}
@@ -599,21 +550,24 @@ public:
 		// For each user, a labelButton is created and added to the layout
 		for (User* user : users)
 		{
-			userInvLabel.push_back(new labelButton(user->getUserName()));
-			vLayUsrs->addWidget(userInvLabel.back());
-
-			// If user was previously invited to this group
-			if ((*group_it)->out_requests.contains(user->getUserName()))
+			if (user != currentUser)
 			{
-				userInvLabel.back()->setText(user->getUserName() + " (Invitation sent)");
-				userInvLabel.back()->setDisabled(true);
-			}
+				userInvLabel.push_back(new labelButton(user->getUserName()));
+				vLayUsrs->addWidget(userInvLabel.back());
 
-			// If user is a member of the currentUser group
-			if (user->getGroupID() == currentUser->getGroupID())
-			{
-				userInvLabel.back()->setText(user->getUserName() + " (Member of your group)");
-				userInvLabel.back()->setDisabled(true);
+				// If user was previously invited to this group
+				if ((*group_it)->out_requests.contains(user->getUserName()))
+				{
+					userInvLabel.back()->setText(user->getUserName() + " (Invitation sent)");
+					userInvLabel.back()->setDisabled(true);
+				}
+
+				// If user is a member of the currentUser group
+				if (user->getGroupID() == currentUser->getGroupID())
+				{
+					userInvLabel.back()->setText(user->getUserName() + " (Member of your group)");
+					userInvLabel.back()->setDisabled(true);
+				}
 			}
 		}
 
@@ -865,99 +819,6 @@ public:
 			layout = nullptr;
 		}
 	}
-
-	// Load the users from Database and load them into 'users' vector
-	void loadUsersFromDB()
-	{
-		// Clearing Users vector in order to get better results
-		users.clear();
-
-		sqlite3* db{};
-
-		// Checks and Open the Database
-		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
-		{
-			//records gets the output of the SELECT query given by 'getRecords()'
-			std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, group_ID, user_type") };
-
-			// Load the database users to the Users vector 'users' in case they exist in Database
-			if (!records.empty())
-			{
-				// For every record, a user is read and stored in the Users vector (except from the current User)
-				for (const QStringList& record : records)
-				{
-					if (!(record[0] == currentUser->getUserName())) // Not selecting the current user
-					{
-						// Creating a new User and setting their parameters from the records of Database
-						User* userDB{ new User(record[0]) };
-						userDB->setUserRName(record[1]);
-						userDB->setSalt(record[2]);
-						userDB->setHashPassword(record[3]);
-						userDB->setSaltDB(record[2].toUtf8());
-						userDB->setHashPasswordDB(record[3].toUtf8());
-						userDB->setGroupID(record[4]);
-						userDB->setUserType(record[5]);
-
-						// Inserting the new User to the Users vector
-						users.push_back(userDB);
-					}
-				}
-			}
-			else // When there are no users in Database (even not the current user)
-			{
-				userInfoBox->setIcon(QMessageBox::Warning);
-				userInfoBox->setText("There are no users in Database");
-				userInfoBox->exec();
-			}
-			closeSQLiteDB(db);
-		}
-	}
-
-	// Load the groups from Database and load them into 'groups' vector
-	void loadGroupsFromDB()
-	{
-		// Clearing Users vector in order to get better results
-		groups.clear();
-
-		sqlite3* db{};
-
-		// Checks and Open the Database
-		if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups }) == DB::OPEN_SUCCESS)
-		{
-			//records gets the output of the SELECT query given by 'getRecords()'
-			std::string columns
-			{
-				DB::Groups::col_ID + ", " + DB::Groups::col_group_name + ", " + DB::Groups::col_users + ", " + DB::Groups::col_inrequests + ", " + DB::Groups::col_outrequests + ", " + DB::Groups::col_status
-			};
-			std::vector<QStringList> records{ getRecords(db, DB::tableGroups, columns) };
-
-			// Load the database groups to the Groups vector 'groups' in case they exist in Database
-			if (!records.empty())
-			{
-				// For every record, a group is read and stored in the groups vector
-				for (const QStringList& record : records)
-				{
-
-					Group* groupDB{ new Group {
-						record[0].toInt(),     // Group ID
-						record[1],			   // Group Name	
-						record[2].split(", "), // users in the group
-						record[3].split(", "), // in requests (users)
-						record[4].split(", "), // out requests (users)
-						record[5]			   // status group
-					} };
-
-					if (groupDB->in_requests[0] == "") groupDB->in_requests.clear();
-					if (groupDB->out_requests[0] == "") groupDB->out_requests.clear();
-
-					// Inserting the Group to the groups vector
-					groups.push_back(groupDB);
-
-				}
-			}
-			closeSQLiteDB(db);
-		}
-	}	
 
 	// Load the section for creating a group
 	void loadCreateGroupSection()
@@ -1931,33 +1792,20 @@ public:
 						// Removes the group to the 'groups' vector and disable it in Database in case this group has not other members
 						if ((*group_it)->users.isEmpty())
 						{
-							// Setting the group as inactive in Database and removing all In Requests and Out Requests
-							condition = DB::Groups::col_ID + " = '" + std::to_string((*group_it)->ID) + "'";
-							if (updateRecords(db, DB::tableGroups, DB::Groups::col_status, DB::Groups::status_inactive.toStdString(), condition)
-								&& updateRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "", condition)
-								&& updateRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "", condition))
-							{			
+							
+							// Deleting the group from group vector and database
+							deleteGroup(db, (*group_it), userInfoBox, false);
+							
+							// Removing the group as requestable to be joined
+							auto reqLabel_it{ std::find_if(reqToGroupLabel.begin(), reqToGroupLabel.end(), [&](labelButton* reqLabel) {
+								return reqLabel && reqLabel->text() == (*group_it)->name;
+								}) };
 
-								// Setting the group as inactive in 'groups' vector
-								(*group_it)->status = DB::Groups::status_inactive;
-
-								// Clearing the In Requests and Out Requests of the group
-								(*group_it)->in_requests.clear();
-								(*group_it)->out_requests.clear();
-
-								// Removing the group as requestable to be joined
-								auto reqLabel_it{ std::find_if(reqToGroupLabel.begin(), reqToGroupLabel.end(), [&](labelButton* reqLabel) {
-									return reqLabel && reqLabel->text() == (*group_it)->name;										
-									}) };
-
-								if (reqLabel_it != reqToGroupLabel.end())
-								{
-									delete (*reqLabel_it);
-									(*reqLabel_it) = nullptr;
-								}
-
-
-							}
+							if (reqLabel_it != reqToGroupLabel.end())
+							{
+								delete (*reqLabel_it);
+								(*reqLabel_it) = nullptr;
+							}							
 						}
 
 						// When a User leaves the group, he does not have neither invitations nor user requests
@@ -1996,9 +1844,12 @@ public:
 			// Enabling sending invitations to all users again
 			for (User* user : users)
 			{
-				auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
-				(*userInvLbl)->setText(user->getUserName());
-				(*userInvLbl)->setDisabled(false);
+				if (user != currentUser)
+				{
+					auto userInvLbl{ std::find_if(userInvLabel.begin(), userInvLabel.end(), [=](labelButton* userButton) { return userButton->text().contains(user->getUserName()); }) };
+					(*userInvLbl)->setText(user->getUserName());
+					(*userInvLbl)->setDisabled(false);
+				}
 			}	
 		}
 

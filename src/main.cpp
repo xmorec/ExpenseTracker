@@ -4,7 +4,6 @@
 #include "loggingWindow.h"
 
 
-
 int main(int argc, char* argv[])
 {
     
@@ -19,11 +18,18 @@ int main(int argc, char* argv[])
         // Getting the logged User
         User* currentUser{loggWin->getCurrentUser()};
 
+        // Getting the Users vector
+        std::vector<User*> users{ std::move(loggWin->getUsers()) };
+
+        // Getting the Groups vector
+        std::vector<Group*> groups{ std::move(loggWin->getGroups()) };
+
         // deleting loggWin as it is no longer needed
         delete loggWin;
+        loggWin = nullptr;
 
         // Executing the main window program (screen geometry parameters are set as input parameters to resize the main window)
-        mainWindow* window = new mainWindow(currentUser);
+        mainWindow* window = new mainWindow(currentUser, users, groups);
         
         return app.exec();
     }

@@ -1,7 +1,7 @@
 ﻿#include "mainWindow.h"
 
 
-mainWindow::mainWindow(User* currentUser)
+mainWindow::mainWindow(User* currentUser, std::vector<User*>& users, std::vector<Group*>& groups)
 {
 
     // Set fixed Window size (user cannot resize it)
@@ -30,7 +30,7 @@ mainWindow::mainWindow(User* currentUser)
     buttonLayout->addWidget(prefButt);
 
     // Declaring and Initializing the Preferences Window
-    confWindow* prefWin{new confWindow(currentUser)};
+    confWindow* prefWin{new confWindow(currentUser, users, groups)};
 
     // When clicking in the Preferences Button, the Preferences Window is shown
     QObject::connect(prefButt, &QPushButton::clicked, [=]() {
@@ -63,10 +63,10 @@ mainWindow::mainWindow(User* currentUser)
     buttonLayout->addWidget(groupButt);
 
     // Declaring and Initializing the Preferences Window
-    groupManWindow* groupManWin{new groupManWindow(currentUser)};
+    groupManWindow* groupManWin{new groupManWindow(currentUser, users, groups)};
 
     // Depending on the News status, the icon will show a red circle (notification) or not.
-    if (groupManWin->getNewsStatus())
+    if (groupManWin->getNewsInvStatus() || groupManWin->getNewsReqStatus())
     {
         groupButt->setIcon((QIcon(icons::groupPrefNewsIcon)));
     }

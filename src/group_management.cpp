@@ -87,3 +87,41 @@ bool updateRequestCol(sqlite3* db, User* user, const std::string& col_update, Gr
 
 
 }
+
+// Deletes a group from Database and from 'groups' vector. Returns true for a successful removing, false otherwise
+bool deleteGroup(sqlite3* db, Group* group, QMessageBox* userInfoBox, bool dbOpen)
+{
+
+	bool deleteFlag{ false };
+
+	if (dbOpen) // In case Database should be opened and checked
+	{
+		deleteFlag = checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableGroups, DB::tableUsers }) == DB::OPEN_SUCCESS;
+	}
+
+	// Setting the group as inactive in Database and removing all In Requests and Out Requests
+	std::string condition = DB::Groups::col_ID + " = '" + std::to_string(group->ID) + "'";
+
+	if (deleteFlag &= updateRecords(db, DB::tableGroups, DB::Groups::col_status, DB::Groups::status_inactive.toStdString(), condition)
+		&& updateRecords(db, DB::tableGroups, DB::Groups::col_inrequests, "", condition)
+		&& updateRecords(db, DB::tableGroups, DB::Groups::col_outrequests, "", condition))
+	{
+
+		// Setting the group as inactive in 'groups' vector
+		group->status = DB::Groups::status_inactive;
+
+		// Clearing the In Requests and Out Requests of the group
+		group->in_requests.clear();
+		group->out_requests.clear();
+
+	}
+
+	if (dbOpen) // In case Database should were opened and check within this function
+	{
+		closeSQLiteDB(db);
+	}
+
+	return deleteFlag;
+
+
+}

@@ -1,7 +1,8 @@
 ﻿#include "usr_preferences.h"
 
 // Constructs the main Preference Window interface and functiontality
-confWindow::confWindow(User* user) : currentUser(user)
+confWindow::confWindow(User* currentUser, std::vector<User*>& users, std::vector<Group*>& groups) 
+	: currentUser(currentUser), users (users), groups (groups)
 {
 	// Setting Window title and icon
 	setWindowIcon(QIcon(icons::prefIcon));
@@ -164,17 +165,18 @@ confWindow::confWindow(User* user) : currentUser(user)
 	infoManText->setAlignment(Qt::AlignCenter);
 	infoManText->hide();
 
-	// The User Management section is filled with each user information
-	loadUserManagement();
-	
 	// Setting the Users Init vector with the users vector when initializing the preferences window
 	usersInit = users;
+	usersInit.erase(std::find(usersInit.begin(), usersInit.end(), currentUser));
+
+	// The User Management section is filled with each user information
+	loadUserManagement();
 
 	// Updating the total users number (when intializing preferences window)
-	totalInitUsers = users.size();
+	totalInitUsers = usersInit.size();
 
 	// Adding buttons for Saving or Canceling actions made durin User Management 
-	if (users.size() > 0) // If there are other users in Database
+	if (usersInit.size() > 0) // If there are other users in Database
 	{
 		labelButton* saveManButton{ new labelButton("Save") };
 		labelButton* cancelManButton{ new labelButton("Cancel") };
@@ -245,17 +247,14 @@ void confWindow::loadUserManagement()
 	removedUsers.clear();
 	modifiedUsers.clear();
 
-	//Load Users from DB and store them in 'users' vector
-	loadUsersFromDB();
-
 	// In case there are other users in Database, no need for showing information message
-	if (users.size() > 0)
+	if (usersInit.size() > 0)
 	{
 		infoManText->hide();
 	}
 
 	// Number of users
-	int usersNum{ static_cast<int>(users.size()) };
+	int usersNum{ static_cast<int>(usersInit.size()) };
 
 	// Reserving memory for the Labels and Comboboxes for users
 	userLabels.reserve(usersNum);
@@ -281,10 +280,10 @@ void confWindow::loadUserManagement()
 	for (int pos = 0; pos < usersNum; ++pos)
 	{
 		// Getting the Username and User Role (UserType)
-		userLabels.push_back(new QLabel(users[pos]->getUserName()));
+		userLabels.push_back(new QLabel(usersInit[pos]->getUserName()));
 		userRoles.push_back(new QComboBox());
 		userRoles.back()->addItems(rolesList);
-		userRoles.back()->setCurrentText(users[pos]->getUserType());
+		userRoles.back()->setCurrentText(usersInit[pos]->getUserType());
 		lastRoles.push_back(new QString(userRoles.back()->currentText()));
 
 		// Adding removing icon button for each user
@@ -301,7 +300,7 @@ void confWindow::loadUserManagement()
 		// Adding the HLayout to the VLayout of User Management Settings
 		userManLay->addLayout(userHLays.back());
 
-		// Action executed when pressing on "Remove User" Icon Button
+		// Action executed when changing the user role
 		QObject::connect(userRoles[pos], &QComboBox::currentTextChanged, [=]() {
 			updateRole(pos);
 			});
@@ -426,7 +425,7 @@ void confWindow::saveManagement()
 			// Loop that removes the desired useres beginning with the last user User vector
 			for (int i = removedUsers.size() - 1; i >= 0; --i)
 			{
-				// Preparig the clause for Deleting the desired user from Database
+				// Setting the clause for Deleting the desired user from Database
 				std::string userName{ usersInit.at(removedUsers[i])->getUserName().toStdString() };
 				std::string clause{ "WHERE username = '" + userName + "'" };
 
@@ -437,6 +436,10 @@ void confWindow::saveManagement()
 				{
 					// Refreshing the Deleting status Flag
 					deletingStatusFlag &= true;
+
+					// Removing user from 'users' vector
+					auto rmvUser_it{ std::find(users.begin(), users.end(), usersInit[removedUsers[i]]) };
+					users.erase(rmvUser_it);
 
 					// Detecting if a modified User was also removed
 					if (modifiedUsers.size() > 0)
@@ -472,7 +475,12 @@ void confWindow::saveManagement()
 				std::string role {userRoles[modifiedUsers[i]]->currentText().toStdString()};
 
 				// modifying Status Flag is updated according the result of the updating Database process
-				modifyStatusFlag &= updateRecords(db, DB::tableUsers, DB::Users::col_usertype, role, condition);
+				if (modifyStatusFlag &= updateRecords(db, DB::tableUsers, DB::Users::col_usertype, role, condition))
+				{
+					// Modifying user at users vector according his new Role
+					auto modUser_it{ std::find(users.begin(), users.end(), usersInit[modifiedUsers[i]]) };
+					(*modUser_it)->setUserType(userRoles[modifiedUsers[i]]->currentText());					
+				}
 			}
 		}
 
@@ -500,9 +508,8 @@ void confWindow::saveManagement()
 			userInfoBox->exec();
 		}
 
-		// Updating the Users vector with the users from Database
-		loadUsersFromDB();
-		if(users.size() == 0) // If there are no Users to show (no users in Database appart from the current one)
+		
+		if(users.size() == 1) // If there are no Users to show (no users in Database appart from the current one)
 		{
 			infoManText->setText("There are no other\nexisting users to show.");			
 			infoManText->show();
@@ -532,11 +539,12 @@ void confWindow::restoreManContent()
 	// The button layout is removed in order to put it in the proper place in the User Management Layout
 	userManLay->removeItem(userManButtonsLay);
 
-	// Data from Database is read and loaded again to the User Management field
-	loadUserManagement();
-
 	// Setting the Users Init vector with the users vector when initializing the preferences window
 	usersInit = users;
+	usersInit.erase(std::find(usersInit.begin(), usersInit.end(), currentUser));
+
+	// Data from Database is read and loaded again to the User Management field
+	loadUserManagement();
 
 	// Button layout is added again to the User Management Layout, just below the users layout
 	userManLay->addLayout(userManButtonsLay);
@@ -888,53 +896,6 @@ void confWindow::disableFields(bool disable, QLineEdit* fieldEdit)
 
 	// Sets the color of the Field according if it is disabled or enabled
 	fieldEdit->setStyleSheet(disable ? fieldColor::disable : fieldColor::enable);
-}
-
-//Load Users from DB and store them in 'users' vector
-void confWindow::loadUsersFromDB()
-{
-	// Clearing Users vector in order to get better results
-	users.clear();
-
-	sqlite3* db{};
-
-	// Checks and Open the Database
-	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers }) == DB::OPEN_SUCCESS)
-	{
-		//records gets the output of the SELECT query given by 'getRecords()'
-		std::vector<QStringList> records{ getRecords(db, DB::tableUsers, "username, name, salt, hash_password, user_type") };
-
-		// Load the database users to the Users vector 'users' in case they exist in Database
-		if (!records.empty())
-		{
-			// For every record, a user is read and stored in the Users vector (except from the current User)
-			for (const QStringList& record : records)
-			{
-				if (!(record[0] == currentUser->getUserName())) // No current user
-				{
-					// Creating a new User and setting their parameters from the records of Database
-					User* userDB{ new User(record[0]) };
-					userDB->setUserRName(record[1]);
-					userDB->setSalt(record[2]);
-					userDB->setHashPassword(record[3]);
-					userDB->setSaltDB(record[2].toUtf8());
-					userDB->setHashPasswordDB(record[3].toUtf8());
-					userDB->setUserType(record[4]);
-
-					// Inserting the new User to the Users vector
-					users.push_back(userDB);
-				}
-			}
-		}
-		else // When there are no users in Database (even not the current user)
-		{
-			userInfoBox->setIcon(QMessageBox::Warning);
-			userInfoBox->setText("There are no users in Database");
-			userInfoBox->exec();
-		}
-		closeSQLiteDB(db);
-	}
-
 }
 
 // Reset the content shown in the Preferences Dialog Window to default

@@ -21,6 +21,7 @@
 // It creates the Window (QDialog) for managing the logging session and user creation
 //////////////////////////////////////////////////////////////////////////////////////////
 
+
 class loggingWindow : public QDialog
 {
 
@@ -50,6 +51,9 @@ private:
 	// Users vector that contains all users in the program-system
 	std::vector<User*> users{};	
 
+	// Vector storing all Groups
+	std::vector<Group*> groups{};
+
 	// Logged User
 	User* loggedUser{nullptr};
 
@@ -60,6 +64,9 @@ public:
 
 	//Load Users from DB and store them in 'users' vector
 	void loadUsersFromDB();
+
+	// Load the groups from Database and load them into 'groups' vector
+	void loadGroupsFromDB();
 
 	// Execute the Logging In process and Checking
 	void loggingIn();
@@ -79,6 +86,12 @@ public:
 	// Returns the logging status flag
 	bool getLoggingStatus();
 	
+	// Return the users vector
+	std::vector<User*>& getUsers();
+
+	// Returns the groups vector
+	std::vector<Group*>& getGroups();
+
 	// Returns the logged User
 	User* getCurrentUser();
 

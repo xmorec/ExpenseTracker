@@ -84,6 +84,17 @@ public:
 
 };
 
+// This struct contains the main parameters of a Group
+struct Group
+{
+	int ID{};
+	QString name{};
+	QStringList users{};
+	QStringList in_requests{};
+	QStringList out_requests{};
+	QString status{};
+};
+
 // Generating the hashPassword from the plain password and the generated Salt
 QString hashPassword(const QString& plainPassword, const QString& userSalt);
 

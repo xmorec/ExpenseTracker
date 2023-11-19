@@ -25,7 +25,7 @@ class mainWindow : public QMainWindow
 public:
 
     // Constructor of mainWindow 
-    mainWindow(User* currentUser);
+    mainWindow(User* currentUser, std::vector<User*>& users, std::vector<Group*>& groups);
 
 };
 
