@@ -16,6 +16,7 @@
 #include "labelButton.h"
 #include "sql_functions.h"
 #include "iconButton.h"
+#include "group_management.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Description:                                                                         
@@ -148,6 +149,11 @@ public:
 		// Emited signal when username is changed
 		void userNameMod();	
 
+		// Emited signal when a user is removed
+		void userRemoved();
+
+		// Emited signal when a group is removed
+		void groupRemoved();
 };
 
 

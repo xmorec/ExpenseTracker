@@ -417,6 +417,7 @@ void confWindow::saveManagement()
 		// Initializing a flag to check if the deleting process in DataBase was propperly conducted or not (true = correct saving, false = error occured)
 		bool deletingStatusFlag{ true };
 
+		// In case there are users to remove
 		if (removedUsers.size() > 0)
 		{
 			// Sorting the RemovedUsers vector in order to avoid making errors related to exceeding User vector size when executing the loop below
@@ -434,12 +435,55 @@ void confWindow::saveManagement()
 					&& deletingRecords(db, DB::tableExpenses, clause) == true
 					&& deletingRecords(db, DB::tableIncome, clause) == true)
 				{
+
 					// Refreshing the Deleting status Flag
 					deletingStatusFlag &= true;
 
-					// Removing user from 'users' vector
+					// Getting the user iterator from 'users' vector that should be removed
 					auto rmvUser_it{ std::find(users.begin(), users.end(), usersInit[removedUsers[i]]) };
-					users.erase(rmvUser_it);
+					
+
+					// Remove from 'in_requests' group (also in Database)
+					auto requestedGroup_it{std::find_if(groups.begin(), groups.end(), [&](Group* group) {return group->in_requests.contains((*rmvUser_it)->getUserName()); })};
+					while (requestedGroup_it != groups.end())
+					{
+						deletingStatusFlag &= updateRequestCol(db, (*rmvUser_it), DB::Groups::col_inrequests, (*requestedGroup_it), REMOVE_REQUEST);
+						requestedGroup_it = std::find_if(groups.begin(), groups.end(), [&](Group* group) {return group->in_requests.contains((*rmvUser_it)->getUserName()); });
+					}
+
+					// Remove from 'out_requests' group (also in Database)
+					auto groupInv_it{ std::find_if(groups.begin(), groups.end(), [&](Group* group) {return group->out_requests.contains((*rmvUser_it)->getUserName()); }) };
+					while (groupInv_it != groups.end())
+					{
+						deletingStatusFlag &= updateRequestCol(db, (*rmvUser_it), DB::Groups::col_outrequests, (*groupInv_it), REMOVE_REQUEST);
+						groupInv_it = std::find_if(groups.begin(), groups.end(), [&](Group* group) {return group->out_requests.contains((*rmvUser_it)->getUserName()); });
+					}
+
+					// Remove from 'members' group (also in Database)
+					auto group_it{ std::find_if(groups.begin(), groups.end(), [&](Group* group) {return group->users.contains((*rmvUser_it)->getUserName()); }) };
+					while (group_it != groups.end())
+					{
+						deletingStatusFlag &= updateRequestCol(db, (*rmvUser_it), DB::Groups::col_users, (*group_it), REMOVE_REQUEST);
+
+						// In case this group now does not have any member it is deleted (or set inactive)
+						if ((*group_it)->users.isEmpty())
+						{
+							// Deleting the group from group vector and database
+							deletingStatusFlag &= deleteGroup(db, (*group_it), userInfoBox, false);
+
+							emit groupRemoved();
+						}
+						group_it = std::find_if(groups.begin(), groups.end(), [&](Group* group) {return group->users.contains((*rmvUser_it)->getUserName()); });
+					}
+
+					// In case the deleting user from database is successful, a signal is emited in order to handle other parts of the program
+					if (deletingStatusFlag)
+					{
+						// Remove user from 'users' vector
+						users.erase(rmvUser_it);
+
+						emit userRemoved();
+					}
 
 					// Detecting if a modified User was also removed
 					if (modifiedUsers.size() > 0)
@@ -485,6 +529,7 @@ void confWindow::saveManagement()
 		}
 
 		closeSQLiteDB(db);
+
 
 		// When deleting process in Database was successfuly done
 		if (deletingStatusFlag && modifyStatusFlag)

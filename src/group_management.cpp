@@ -92,7 +92,7 @@ bool updateRequestCol(sqlite3* db, User* user, const std::string& col_update, Gr
 bool deleteGroup(sqlite3* db, Group* group, QMessageBox* userInfoBox, bool dbOpen)
 {
 
-	bool deleteFlag{ false };
+	bool deleteFlag{ true };
 
 	if (dbOpen) // In case Database should be opened and checked
 	{
@@ -109,6 +109,9 @@ bool deleteGroup(sqlite3* db, Group* group, QMessageBox* userInfoBox, bool dbOpe
 
 		// Setting the group as inactive in 'groups' vector
 		group->status = DB::Groups::status_inactive;
+
+		// Clearing the Users of the group
+		group->users.clear();
 
 		// Clearing the In Requests and Out Requests of the group
 		group->in_requests.clear();

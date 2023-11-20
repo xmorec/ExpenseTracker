@@ -48,8 +48,7 @@ mainWindow::mainWindow(User* currentUser, std::vector<User*>& users, std::vector
     // When username is updated from Prefernces Window, Main Window title should be updated too   
     QObject::connect(prefWin, &confWindow::userNameMod, [=]() {
         setWindowTitle("Expense Tracker - " + currentUser->getUserName());
-        });
-        
+        });        
 
 
    //////////////////////////////////////////////////////////////////////////////////////////
@@ -96,8 +95,45 @@ mainWindow::mainWindow(User* currentUser, std::vector<User*>& users, std::vector
     // When there are new input requests as user joined new group with input requests
     QObject::connect(groupManWin, &groupManWindow::raisedNews, [=]() {
         groupButt->setIcon((QIcon(icons::groupPrefNewsIcon)));
+        });       
+
+    
+    // When user is removed from Preferences Window, the Group Management should be updated accordingly
+    QObject::connect(prefWin, &confWindow::userRemoved, [=]() {
+        if (groupManWin->getGroupDialogsStatus())
+        {
+            groupManWin->updateInvitationWindow();
+            groupManWin->updateMembersWindow();
+            groupManWin->updateHandleInvReqWindow();
+        }
+
+        if (groupManWin->getNewsInvStatus() || groupManWin->getNewsReqStatus())
+        {
+            groupButt->setIcon((QIcon(icons::groupPrefNewsIcon)));
+        }
+        else
+        {
+            groupButt->setIcon((QIcon(icons::groupPrefIcon)));
+        }
+
         });
-       
+
+    // When group is removed from Preferences Window, the Group Management should be updated accordingly
+    QObject::connect(prefWin, &confWindow::groupRemoved, [=]() {
+
+        groupManWin->updateReceivedInvitationsWindow();
+        groupManWin->updateSendRequestsWindow();
+
+        if (groupManWin->getNewsInvStatus() || groupManWin->getNewsReqStatus())
+        {
+            groupButt->setIcon((QIcon(icons::groupPrefNewsIcon)));
+        }
+        else
+        {
+            groupButt->setIcon((QIcon(icons::groupPrefIcon)));
+        }
+        });
+    
 
    mainVLayout->addLayout(buttonLayout);
    mainVLayout->setAlignment(buttonLayout, Qt::AlignLeft);
