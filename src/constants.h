@@ -17,10 +17,10 @@ namespace DB
 	inline const int NO_GROUP{ 0 }; // "0" is the non-group value (group ID = 0)
 
 	// Return values when accessing to the Database
-	inline const int OPEN_SUCCESS{ 100 }; // Return value when Database and tables exists and also Database could be opened
-	inline const int OPEN_NOT_SUCCESS{ 101 }; // Return value when Tables are not existing
-	inline const int NO_TABLES { 102 }; // Return value when Tables are not existing
-	inline const int NO_DB { 103 }; // Return value when Database is not existing
+	inline constexpr int OPEN_SUCCESS{ 100 }; // Return value when Database and tables exists and also Database could be opened
+	inline constexpr int OPEN_NOT_SUCCESS{ 101 }; // Return value when Tables are not existing
+	inline constexpr int NO_TABLES { 102 }; // Return value when Tables are not existing
+	inline constexpr int NO_DB { 103 }; // Return value when Database is not existing
 
 
 	namespace Users
@@ -80,15 +80,15 @@ namespace icons
 
 namespace cellColor
 {
-	inline static const QColor disableColor{ QColor(Qt::gray) };
-	inline static const QColor enableColor{ QColor(Qt::white) };
-	inline static const QColor errorColor{ "#EA9791" };
+	inline const QColor disableColor{ QColor(Qt::gray) };
+	inline const QColor enableColor{ QColor(Qt::white) };
+	inline const QColor errorColor{ "#EA9791" };
 }
 
 namespace fieldColor
 {
-	inline static const QString disable { "background-color: rgb(236, 236, 236); "};
-	inline static const QString enable { "background-color: white; " };
+	inline const QString disable { "background-color: rgb(236, 236, 236); "};
+	inline const QString enable { "background-color: white; " };
 }
 
 
