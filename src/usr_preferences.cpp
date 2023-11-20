@@ -410,6 +410,12 @@ void confWindow::saveManagement()
 
 	sqlite3* db{};
 
+	// RemovedGroup will be true if there is at least one group which is removed
+	bool removedGroupFlg { false };
+
+	// removedUser will be true if there is at least one user which is removed
+	bool removedUserFlg{ true };
+
 	// Checking and opening the SQLite Database
 	if (checkAndOpenSQLiteDB(db, userInfoBox, { DB::tableUsers, DB::tableExpenses, DB::tableIncome }) == DB::OPEN_SUCCESS)
 	{
@@ -471,7 +477,7 @@ void confWindow::saveManagement()
 							// Deleting the group from group vector and database
 							deletingStatusFlag &= deleteGroup(db, (*group_it), userInfoBox, false);
 
-							emit groupRemoved();
+							removedGroupFlg = true;							
 						}
 						group_it = std::find_if(groups.begin(), groups.end(), [&](Group* group) {return group->users.contains((*rmvUser_it)->getUserName()); });
 					}
@@ -482,7 +488,7 @@ void confWindow::saveManagement()
 						// Remove user from 'users' vector
 						users.erase(rmvUser_it);
 
-						emit userRemoved();
+						removedUserFlg = true;
 					}
 
 					// Detecting if a modified User was also removed
@@ -534,6 +540,7 @@ void confWindow::saveManagement()
 		// When deleting process in Database was successfuly done
 		if (deletingStatusFlag && modifyStatusFlag)
 		{
+
 			// After all users were removed according removedUsers vector, this vector is cleared
 			removedUsers.clear();
 
@@ -570,6 +577,17 @@ void confWindow::saveManagement()
 	QTimer::singleShot(50, [=]() {
 		winSize = size();
 		});	
+
+	if (removedUserFlg)
+	{
+		emit userRemoved();
+	}
+
+	if (removedGroupFlg)
+	{
+		emit groupRemoved();
+	}
+
 }
 
 // Restores the the content according database

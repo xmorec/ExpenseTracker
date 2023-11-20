@@ -115,6 +115,8 @@ mainWindow::mainWindow(User* currentUser, std::vector<User*>& users, std::vector
         {
             groupButt->setIcon((QIcon(icons::groupPrefIcon)));
         }
+        
+        groupManWin->selectView();
 
         });
 
@@ -132,6 +134,9 @@ mainWindow::mainWindow(User* currentUser, std::vector<User*>& users, std::vector
         {
             groupButt->setIcon((QIcon(icons::groupPrefIcon)));
         }
+
+        groupManWin->selectView();
+
         });
     
 
@@ -152,6 +157,13 @@ mainWindow::mainWindow(User* currentUser, std::vector<User*>& users, std::vector
         setMaximumSize(sizeHint()); // Resizing the Main Window to fit all content inside
         });
     
+
+    // Group name has been changed
+    QObject::connect(groupManWin, &groupManWindow::renamedGroup, [=]() {
+       // Actions to be developed here
+
+        });
+
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     centralWidget->setLayout(mainVLayout);
